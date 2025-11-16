@@ -1,0 +1,138 @@
+<!-- Dark Theme Container -->
+<div class="min-h-screen bg-gray-900 p-6">
+  <!-- Page Header -->
+  <div class="mb-8">
+    <h1 class="text-4xl font-bold text-white mb-2">🪖 Helmet Detection System</h1>
+    <p class="text-gray-400 text-lg">Real-time safety compliance monitoring</p>
+  </div>
+
+  <!-- Main Content Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    
+    <!-- Live Video Feed Card -->
+    <div class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
+      <h2 class="text-2xl font-bold text-white mb-4">📹 Live Camera Feed</h2>
+      
+      <div class="bg-black rounded-lg overflow-hidden mb-4">
+        <video #videoElement autoplay playsinline class="w-full h-auto"></video>
+        <canvas #canvasElement style="display: none;"></canvas>
+      </div>
+      
+      <!-- Camera Controls -->
+      <div class="flex gap-3 mb-4">
+        <button 
+          (click)="toggleWebcam()" 
+          [class.bg-red-600]="isWebcamActive"
+          [class.bg-green-600]="!isWebcamActive"
+          class="flex-1 px-4 py-3 text-white font-semibold rounded-lg hover:opacity-90 transition">
+          {{ isWebcamActive ? '⏸ Stop Camera' : '▶ Start Camera' }}
+        </button>
+        <button 
+          (click)="detectHelmet()" 
+          [disabled]="!isWebcamActive || isDetecting"
+          class="flex-1 px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition disabled:bg-gray-600 disabled:cursor-not-allowed">
+          {{ isDetecting ? '⏳ Detecting...' : '🔍 Detect Helmets' }}
+        </button>
+      </div>
+      
+      <!-- Last Detection Result -->
+      <div *ngIf="lastDetection" class="bg-gray-900 rounded-lg p-4 border border-gray-700">
+        <h3 class="text-lg font-bold text-cyan-400 mb-3">Last Detection Result:</h3>
+        <div class="space-y-2 text-gray-300">
+          <p>Total People: <strong class="text-white">{{ lastDetection.totalPeople }}</strong></p>
+          <p>Compliant: <strong class="text-green-400">{{ lastDetection.compliantCount }}</strong></p>
+          <p>Violations: <strong class="text-red-400">{{ lastDetection.violationCount }}</strong></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="space-y-6">
+      
+      <!-- Stat Cards Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <!-- Total People Card -->
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700 text-center">
+          <div class="text-4xl mb-3">👥</div>
+          <div class="text-gray-400 text-sm uppercase tracking-wide mb-2">Total People</div>
+          <div class="text-3xl font-bold text-white">{{ helmetData.totalPeople }}</div>
+        </div>
+
+        <!-- Compliant Card -->
+        <div class="bg-gray-800 rounded-lg p-6 border border-green-500 text-center">
+          <div class="text-4xl mb-3">✅</div>
+          <div class="text-gray-400 text-sm uppercase tracking-wide mb-2">Compliant</div>
+          <div class="text-3xl font-bold text-green-400">{{ helmetData.compliantCount }}</div>
+        </div>
+
+        <!-- Violations Card -->
+        <div class="bg-gray-800 rounded-lg p-6 border border-red-500 text-center">
+          <div class="text-4xl mb-3">⚠️</div>
+          <div class="text-gray-400 text-sm uppercase tracking-wide mb-2">Violations</div>
+          <div class="text-3xl font-bold text-red-400">{{ helmetData.violationCount }}</div>
+        </div>
+      </div>
+
+      <!-- Compliance Rate Chart -->
+      <div class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
+        <h2 class="text-2xl font-bold text-white mb-6">Compliance Rate</h2>
+        <div class="flex items-center justify-center">
+          <div class="relative w-48 h-48">
+            <svg viewBox="0 0 100 100" class="transform -rotate-90">
+              <!-- Background Circle -->
+              <circle 
+                cx="50" 
+                cy="50" 
+                r="40" 
+                fill="none" 
+                stroke="#374151" 
+                stroke-width="8"
+              ></circle>
+              <!-- Progress Circle -->
+              <circle 
+                cx="50" 
+                cy="50" 
+                r="40" 
+                fill="none" 
+                [attr.stroke]="complianceRate >= 80 ? '#10b981' : complianceRate >= 60 ? '#fbbf24' : '#ef4444'"
+                stroke-width="8"
+                stroke-linecap="round"
+                [attr.stroke-dasharray]="(complianceRate * 2.513) + ' 251.3'"
+                class="transition-all duration-1000"
+              ></circle>
+            </svg>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="text-center">
+                <div class="text-5xl font-bold text-cyan-400">{{ complianceRate }}%</div>
+                <div class="text-gray-400 text-sm mt-1">Compliance</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- System Information Card -->
+      <div class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
+        <h3 class="text-xl font-bold text-white mb-4">System Information</h3>
+        <ul class="space-y-3 text-gray-300">
+          <li class="flex items-center gap-2">
+            <span class="text-cyan-400">🎯</span>
+            <span>Model: YOLOv8 Helmet Detection</span>
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="text-cyan-400">📹</span>
+            <span>Real-time video processing</span>
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="text-cyan-400">🔄</span>
+            <span>Updates every 2 seconds</span>
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="text-cyan-400">✨</span>
+            <span>Detects: Hardhat, Head, Person</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>

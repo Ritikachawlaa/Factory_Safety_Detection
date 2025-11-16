@@ -1,0 +1,301 @@
+<div class="min-h-screen bg-factory-dark p-6">
+  <!-- ============================================================================
+       HEADER WITH CONNECTION STATUS
+       ============================================================================ -->
+  <header class="mb-8">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-4xl font-bold text-white mb-2">🏭 Factory Safety Dashboard</h1>
+        <p class="text-gray-400">Real-time Monitoring & Analytics</p>
+      </div>
+      
+      <!-- Connection Status Indicator -->
+      <div class="flex items-center gap-3">
+        <button 
+          (click)="refreshData()"
+          class="px-4 py-2 bg-factory-accent text-black rounded-lg hover:bg-opacity-90 transition">
+          🔄 Refresh
+        </button>
+        <div class="flex items-center gap-2 px-4 py-2 rounded-lg" 
+             [ngClass]="{
+               'bg-green-900 text-green-300': connectionStatus() === 'connected',
+               'bg-red-900 text-red-300': connectionStatus() === 'disconnected',
+               'bg-yellow-900 text-yellow-300': connectionStatus() === 'reconnecting'
+             }">
+          <span class="w-3 h-3 rounded-full" 
+                [ngClass]="{
+                  'bg-green-400 animate-pulse': connectionStatus() === 'connected',
+                  'bg-red-400': connectionStatus() === 'disconnected',
+                  'bg-yellow-400 animate-pulse': connectionStatus() === 'reconnecting'
+                }"></span>
+          <span class="font-medium">{{ connectionStatus() | uppercase }}</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================================================================
+       CRITICAL ALERT BANNER (Full Width - RED when active)
+       ============================================================================ -->
+  <div class="mb-6 p-6 rounded-xl border-2 transition-all duration-300"
+       [ngClass]="{
+         'bg-red-900 border-red-500 animate-pulse-slow': latestAlert(),
+         'bg-green-900 border-green-700': !latestAlert()
+       }">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        @if (latestAlert()) {
+          <span class="text-5xl">🚨</span>
+          <div>
+            <h2 class="text-2xl font-bold text-white mb-1">{{ latestAlert()!.message }}</h2>
+            <p class="text-gray-300">Module: {{ latestAlert()!.module | uppercase }} | {{ latestAlert()!.timestamp | date:'short' }}</p>
+          </div>
+        } @else {
+          <span class="text-5xl">✅</span>
+          <div>
+            <h2 class="text-2xl font-bold text-white mb-1">All Systems Operating Normally</h2>
+            <p class="text-gray-300">No violations detected</p>
+          </div>
+        }
+      </div>
+      
+      @if (latestAlert()) {
+        <button 
+          (click)="clearAllAlerts()"
+          class="px-6 py-3 bg-white text-red-900 rounded-lg font-bold hover:bg-gray-100 transition">
+          Clear Alerts ({{ totalAlerts() }})
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- ============================================================================
+       MODULE SUMMARY CARDS (2x2 Grid)
+       ============================================================================ -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+    
+    <!-- 🪖 HELMET SAFETY CARD -->
+    <div class="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-cyan-400 transition-all duration-300 shadow-lg">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold text-gray-200">🪖 Helmet Safety</h3>
+        <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider"
+              [ngClass]="{
+                'bg-red-500 text-white animate-pulse': helmetData().violationCount > 0,
+                'bg-green-500 text-white': helmetData().violationCount === 0
+              }">
+          {{ helmetData().violationCount > 0 ? 'VIOLATIONS' : 'SAFE' }}
+        </span>
+      </div>
+      
+      <div class="text-center py-4">
+        <div class="font-bold mb-2 transition-all duration-500"
+             [ngClass]="{
+               'text-7xl text-red-500': helmetData().violationCount > 0,
+               'text-7xl text-green-500': helmetData().violationCount === 0
+             }">
+          {{ helmetData().violationCount }}
+        </div>
+        <div class="text-gray-400 text-sm uppercase tracking-wide">Violations Today</div>
+      </div>
+
+      <div class="space-y-3 text-sm border-t border-gray-700 pt-4 mt-4">
+        <div class="flex justify-between items-center">
+          <span class="text-gray-400">Total People:</span>
+          <span class="text-white font-bold text-lg">{{ helmetData().totalPeople }}</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-gray-400">Compliant:</span>
+          <span class="text-green-400 font-bold text-lg">{{ helmetData().compliantCount }}</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-gray-400">Compliance Rate:</span>
+          <span class="text-cyan-400 font-bold text-lg">{{ helmetComplianceRate() }}%</span>
+        </div>
+      </div>
+
+      <div class="mt-4 h-3 bg-gray-700 rounded-full overflow-hidden">
+        <div class="h-full bg-gradient-to-r from-green-500 to-cyan-400 transition-all duration-1000 ease-out" 
+             [style.width.%]="helmetComplianceRate()"></div>
+      </div>
+    </div>
+
+    <!-- 👥 LOITERING DETECTION CARD -->
+    <div class="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-cyan-400 transition-all duration-300 shadow-lg">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold text-gray-200">👥 Loitering Status</h3>
+        <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider"
+              [ngClass]="{
+                'bg-yellow-400 text-black animate-pulse': loiteringData().activeGroups > 0,
+                'bg-gray-600 text-white': loiteringData().activeGroups === 0
+              }">
+          {{ loiteringData().activeGroups > 0 ? 'ALERT' : 'OK' }}
+        </span>
+      </div>
+      
+      <div class="text-center py-4">
+        <div class="font-bold mb-2 transition-all duration-500"
+             [ngClass]="{
+               'text-7xl text-yellow-400': loiteringData().activeGroups > 0,
+               'text-7xl text-gray-500': loiteringData().activeGroups === 0
+             }">
+          {{ loiteringData().activeGroups }}
+        </div>
+        <div class="text-gray-400 text-sm uppercase tracking-wide">Active Groups Detected</div>
+      </div>
+
+      <div class="space-y-3 text-sm border-t border-gray-700 pt-4 mt-4 text-gray-400">
+        <div class="flex items-center gap-2">
+          <span class="text-cyan-400">⏱️</span>
+          <span>Threshold: 10 seconds proximity</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-cyan-400">📏</span>
+          <span>Detection Range: 150 pixels</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-cyan-400">📊</span>
+          <span>Real-time group tracking</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 📦 PRODUCTION COUNTER CARD -->
+    <div class="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-cyan-400 transition-all duration-300 shadow-lg">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold text-gray-200">📦 Items Counted</h3>
+        <span class="px-3 py-1 rounded-full text-xs font-bold bg-green-500 text-white uppercase tracking-wider">
+          ACTIVE
+        </span>
+      </div>
+      
+      <div class="text-center py-4">
+        <div class="text-7xl font-bold text-cyan-400 mb-2 tabular-nums">
+          {{ productionData().itemCount | number }}
+        </div>
+        <div class="text-gray-400 text-sm uppercase tracking-wide">Total Production Today</div>
+      </div>
+
+      <div class="space-y-3 text-sm border-t border-gray-700 pt-4 mt-4 text-gray-400">
+        <div class="flex items-center gap-2">
+          <span class="text-cyan-400">📊</span>
+          <span>Counting Line: Y=240 (50% height)</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-cyan-400">🎯</span>
+          <span>Tracking: 6 object classes</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-cyan-400">⚡</span>
+          <span class="text-green-400 font-bold">+{{ productionData().itemsPerMinute }} items/min</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✓ ATTENDANCE CARD -->
+    <div class="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-cyan-400 transition-all duration-300 shadow-lg">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold text-gray-200">✓ Employees Verified</h3>
+        <span class="px-3 py-1 rounded-full text-xs font-bold bg-blue-500 text-white uppercase tracking-wider">
+          {{ attendanceData().verifiedCount }} TODAY
+        </span>
+      </div>
+      
+      <div class="text-center py-4">
+        <div class="text-7xl font-bold text-cyan-400 mb-2">
+          {{ attendanceData().verifiedCount }}
+        </div>
+        <div class="text-gray-400 text-sm uppercase tracking-wide">Verified Today</div>
+      </div>
+
+      <div class="border-t border-gray-700 pt-4 mt-4">
+        <div class="p-3 bg-gray-900 rounded-lg">
+          <div class="text-gray-400 text-xs mb-1 uppercase tracking-wide">Last Person Seen:</div>
+          <div class="text-white font-bold text-lg">{{ attendanceData().lastPersonSeen }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================================
+       LIVE ALERT LOG (Scrollable Event Feed)
+       ============================================================================ -->
+  <div class="bg-gray-800 rounded-lg p-6 border border-gray-700 shadow-lg">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl">📋</span>
+        <h2 class="text-2xl font-bold text-white">Live Alert Log</h2>
+      </div>
+      
+      <div class="flex items-center gap-3">
+        <!-- Alert Count Badge -->
+        <span class="px-4 py-2 bg-red-900 text-red-300 rounded-lg font-bold" 
+              *ngIf="criticalAlerts().length > 0">
+          {{ criticalAlerts().length }} Active Alert{{ criticalAlerts().length > 1 ? 's' : '' }}
+        </span>
+        
+        <!-- Clear Button -->
+        <button 
+          (click)="clearAllAlerts()"
+          *ngIf="criticalAlerts().length > 0"
+          class="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition">
+          Clear All
+        </button>
+      </div>
+    </div>
+
+    <!-- Scrollable Log Container -->
+    <div class="max-h-96 overflow-y-auto space-y-2 border-t border-gray-700 pt-4">
+      @for (alert of criticalAlerts(); track alert.id) {
+        <div class="p-4 rounded-lg border-l-4 transition-all hover:bg-gray-750"
+             [ngClass]="{
+               'bg-red-900 bg-opacity-20 border-red-500': alert.severity === 'critical',
+               'bg-yellow-900 bg-opacity-20 border-yellow-500': alert.severity === 'warning'
+             }">
+          <div class="flex items-start justify-between gap-4">
+            <!-- Alert Icon & Content -->
+            <div class="flex items-start gap-3 flex-1">
+              <span class="text-2xl" [innerHTML]="getAlertIcon(alert.severity)"></span>
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="px-2 py-0.5 rounded text-xs font-bold uppercase"
+                        [ngClass]="{
+                          'bg-red-500 text-white': alert.severity === 'critical',
+                          'bg-yellow-500 text-black': alert.severity === 'warning'
+                        }">
+                    {{ alert.module }}
+                  </span>
+                  <span class="text-gray-400 text-sm font-mono">
+                    {{ alert.timestamp | date:'MMM d, h:mm:ss a' }}
+                  </span>
+                </div>
+                <p class="text-white font-semibold text-lg">{{ alert.message }}</p>
+              </div>
+            </div>
+
+            <!-- Dismiss Button -->
+            <button 
+              (click)="clearAlert(alert.id)"
+              class="px-3 py-1 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition text-sm">
+              Dismiss
+            </button>
+          </div>
+        </div>
+      }
+      
+      @empty {
+        <div class="text-center py-12">
+          <span class="text-6xl mb-4 block">✅</span>
+          <p class="text-gray-400 text-lg">No alerts detected</p>
+          <p class="text-gray-500 text-sm mt-2">All systems operating normally</p>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- ============================================================================
+       FOOTER
+       ============================================================================ -->
+  <footer class="mt-8 text-center text-gray-500 text-sm">
+    <p>⚡ Real-time WebSocket Updates | Powered by YOLO & DeepFace | Built with Angular 17 + Django</p>
+  </footer>
+</div>

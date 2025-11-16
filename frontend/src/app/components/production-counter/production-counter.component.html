@@ -1,0 +1,162 @@
+<!-- Dark Theme Container -->
+<div class="min-h-screen bg-gray-900 p-6">
+  <!-- Page Header -->
+  <div class="mb-8">
+    <h1 class="text-4xl font-bold text-white mb-2">📦 Production Counter System</h1>
+    <p class="text-gray-400 text-lg">Automated box counting with line-crossing detection</p>
+  </div>
+
+  <!-- Main Content Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    
+    <!-- Live Video Feed Card (2 columns) -->
+    <div class="lg:col-span-2 bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
+      <h2 class="text-2xl font-bold text-white mb-4">📹 Live Box Counting</h2>
+      
+      <div class="bg-black rounded-lg overflow-hidden mb-4">
+        <video #videoElement autoplay playsinline class="w-full h-auto"></video>
+        <canvas #canvasElement style="display: none;"></canvas>
+      </div>
+      
+      <!-- Camera Controls -->
+      <div class="grid grid-cols-3 gap-3 mb-4">
+        <button 
+          (click)="toggleWebcam()" 
+          [class.bg-red-600]="isWebcamActive"
+          [class.bg-green-600]="!isWebcamActive"
+          class="px-4 py-3 text-white font-semibold rounded-lg hover:opacity-90 transition">
+          {{ isWebcamActive ? '⏸ Stop Camera' : '▶ Start Camera' }}
+        </button>
+        <button 
+          (click)="countProduction()" 
+          [disabled]="!isWebcamActive || isCounting"
+          class="px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition disabled:bg-gray-600 disabled:cursor-not-allowed">
+          {{ isCounting ? '⏳ Counting...' : '📦 Count Boxes' }}
+        </button>
+        <button 
+          (click)="resetCounter()" 
+          [disabled]="!isWebcamActive"
+          class="px-4 py-3 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition disabled:bg-gray-600 disabled:cursor-not-allowed">
+          🔄 Reset Counter
+        </button>
+      </div>
+      
+      <!-- Last Detection Result -->
+      <div *ngIf="lastDetection" class="bg-gray-900 rounded-lg p-4 border border-gray-700">
+        <h3 class="text-lg font-bold text-cyan-400 mb-3">Last Count Result:</h3>
+        <div class="space-y-2 text-gray-300">
+          <p>Items Counted: <strong class="text-green-400">{{ lastDetection.itemCount }}</strong></p>
+          <p>Session Total: <strong class="text-white">{{ sessionTotal }}</strong></p>
+          <p class="text-sm text-gray-400">Counted at: {{ lastDetection.timestamp | date:'medium' }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Sidebar: Counter Display + Stats -->
+    <div class="space-y-6">
+      
+      <!-- Large Counter Display -->
+      <div class="bg-gray-800 rounded-lg shadow-lg p-8 border border-gray-700 text-center">
+        <div class="text-gray-400 text-sm uppercase tracking-wide mb-3">Total Items Counted</div>
+        <div class="text-7xl font-bold text-cyan-400 mb-4 tabular-nums">{{ productionData.itemCount }}</div>
+        <div class="flex items-center justify-center gap-2 text-green-400 font-semibold">
+          <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+          Active Monitoring
+        </div>
+      </div>
+
+      <!-- Stats Cards -->
+      <div class="space-y-3">
+        <div class="bg-gray-800 rounded-lg p-4 border border-gray-700 flex items-center gap-4">
+          <div class="text-4xl">📊</div>
+          <div class="flex-1">
+            <div class="text-gray-400 text-sm">Session Count</div>
+            <div class="text-2xl font-bold text-white">{{ productionData.itemCount }}</div>
+          </div>
+        </div>
+        
+        <div class="bg-gray-800 rounded-lg p-4 border border-gray-700 flex items-center gap-4">
+          <div class="text-4xl">⚡</div>
+          <div class="flex-1">
+            <div class="text-gray-400 text-sm">Status</div>
+            <div class="text-2xl font-bold text-green-400">Live</div>
+          </div>
+        </div>
+        
+        <div class="bg-gray-800 rounded-lg p-4 border border-gray-700 flex items-center gap-4">
+          <div class="text-4xl">🎯</div>
+          <div class="flex-1">
+            <div class="text-gray-400 text-sm">Detection Mode</div>
+            <div class="text-xl font-bold text-white">Line Crossing</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Section: Box Types + Features -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+
+    <!-- Tracked Box Types Card -->
+    <div class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
+      <h3 class="text-xl font-bold text-white mb-4">Tracked Box Types</h3>
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div class="flex items-center gap-2 bg-gray-900 p-3 rounded-lg border border-gray-700">
+          <span class="text-2xl">📦</span>
+          <span class="text-gray-300 text-sm">Big Close Box</span>
+        </div>
+        <div class="flex items-center gap-2 bg-gray-900 p-3 rounded-lg border border-gray-700">
+          <span class="text-2xl">📦</span>
+          <span class="text-gray-300 text-sm">Big Open Box</span>
+        </div>
+        <div class="flex items-center gap-2 bg-gray-900 p-3 rounded-lg border border-red-700">
+          <span class="text-2xl">⚠️</span>
+          <span class="text-gray-300 text-sm">Big Damaged Box</span>
+        </div>
+        <div class="flex items-center gap-2 bg-gray-900 p-3 rounded-lg border border-gray-700">
+          <span class="text-2xl">📦</span>
+          <span class="text-gray-300 text-sm">Small Close Box</span>
+        </div>
+        <div class="flex items-center gap-2 bg-gray-900 p-3 rounded-lg border border-gray-700">
+          <span class="text-2xl">📦</span>
+          <span class="text-gray-300 text-sm">Small Open Box</span>
+        </div>
+        <div class="flex items-center gap-2 bg-gray-900 p-3 rounded-lg border border-red-700">
+          <span class="text-2xl">⚠️</span>
+          <span class="text-gray-300 text-sm">Small Damaged Box</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- System Features Card -->
+    <div class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
+      <h3 class="text-xl font-bold text-white mb-4">System Features</h3>
+      <ul class="space-y-3 text-gray-300">
+        <li class="flex items-center gap-2">
+          <span class="text-cyan-400">🎯</span>
+          <span>YOLOv8 tracking for accurate detection</span>
+        </li>
+        <li class="flex items-center gap-2">
+          <span class="text-cyan-400">📏</span>
+          <span>Virtual line-crossing detection</span>
+        </li>
+        <li class="flex items-center gap-2">
+          <span class="text-cyan-400">🔄</span>
+          <span>Real-time counting updates every 2 seconds</span>
+        </li>
+        <li class="flex items-center gap-2">
+          <span class="text-cyan-400">📦</span>
+          <span>Supports 6 different box types</span>
+        </li>
+        <li class="flex items-center gap-2">
+          <span class="text-cyan-400">💾</span>
+          <span>Persistent counting during session</span>
+        </li>
+        <li class="flex items-center gap-2">
+          <span class="text-cyan-400">🎨</span>
+          <span>Visual detection with bounding boxes</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
