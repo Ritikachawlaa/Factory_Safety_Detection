@@ -109,16 +109,6 @@ Camera/Video → ML Models → FastAPI → Angular → Browser
              DeepFace    API      Client   Display
 ```
 
-## 🌐 API Endpoints
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /` | Health check |
-| `GET /api/status/helmet` | Helmet detection data |
-| `GET /api/status/loitering` | Loitering detection data |
-| `GET /api/status/counting` | Production counter data |
-| `GET /api/status/attendance` | Attendance system data |
-
 API Docs: http://localhost:8000/docs
 
 ## 🎨 Technology Stack
