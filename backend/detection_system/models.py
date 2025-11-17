@@ -185,3 +185,54 @@ class DailyReport(models.Model):
     
     def __str__(self):
         return f"Daily Report - {self.date}"
+
+
+class SystemConfiguration(models.Model):
+    """Model to store system-wide configuration settings"""
+    config_key = models.CharField(max_length=100, unique=True, db_index=True)
+    config_value = models.JSONField()
+    description = models.TextField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.CharField(max_length=100, default='admin')
+    
+    class Meta:
+        db_table = 'system_configuration'
+        ordering = ['config_key']
+        indexes = [
+            models.Index(fields=['config_key']),
+        ]
+    
+    def __str__(self):
+        return f"{self.config_key}: {self.config_value}"
+
+
+class ModuleConfiguration(models.Model):
+    """Model to enable/disable modules and configure their settings"""
+    module_name = models.CharField(
+        max_length=50,
+        unique=True,
+        choices=[
+            ('helmet_detection', 'Helmet Detection'),
+            ('loitering_detection', 'Loitering Detection'),
+            ('production_counter', 'Production Counter'),
+            ('attendance_system', 'Attendance System'),
+        ]
+    )
+    is_enabled = models.BooleanField(default=True)
+    settings = models.JSONField(default=dict, blank=True)
+    display_name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.CharField(max_length=100, default='admin')
+    
+    class Meta:
+        db_table = 'module_configuration'
+        ordering = ['module_name']
+        indexes = [
+            models.Index(fields=['module_name']),
+            models.Index(fields=['is_enabled']),
+        ]
+    
+    def __str__(self):
+        status = "Enabled" if self.is_enabled else "Disabled"
+        return f"{self.display_name} - {status}"

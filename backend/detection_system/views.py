@@ -7,7 +7,8 @@ from django.utils import timezone
 from datetime import datetime, timedelta
 from .models import (
     HelmetDetection, LoiteringDetection, ProductionCounter,
-    Employee, AttendanceRecord, SystemLog, DailyReport
+    Employee, AttendanceRecord, SystemLog, DailyReport,
+    SystemConfiguration, ModuleConfiguration
 )
 from .serializers import (
     HelmetDetectionSerializer, LoiteringDetectionSerializer,
@@ -307,3 +308,117 @@ class DashboardSummaryView(APIView):
         }
         
         return Response(summary)
+
+
+class ModuleConfigurationView(APIView):
+    """API for managing module configurations (enable/disable modules)"""
+    
+    def get(self, request):
+        """Get all module configurations"""
+        modules = ModuleConfiguration.objects.all()
+        data = [{
+            'module_name': module.module_name,
+            'display_name': module.display_name,
+            'is_enabled': module.is_enabled,
+            'settings': module.settings,
+            'description': module.description,
+            'updated_at': module.updated_at
+        } for module in modules]
+        return Response(data)
+    
+    def post(self, request):
+        """Create or update module configuration"""
+        module_name = request.data.get('module_name')
+        if not module_name:
+            return Response({'error': 'module_name is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        module, created = ModuleConfiguration.objects.get_or_create(
+            module_name=module_name,
+            defaults={
+                'display_name': request.data.get('display_name', module_name.replace('_', ' ').title()),
+                'is_enabled': request.data.get('is_enabled', True),
+                'settings': request.data.get('settings', {}),
+                'description': request.data.get('description', ''),
+                'updated_by': request.data.get('updated_by', 'admin')
+            }
+        )
+        
+        if not created:
+            # Update existing module
+            if 'is_enabled' in request.data:
+                module.is_enabled = request.data['is_enabled']
+            if 'settings' in request.data:
+                module.settings = request.data['settings']
+            if 'description' in request.data:
+                module.description = request.data['description']
+            if 'updated_by' in request.data:
+                module.updated_by = request.data['updated_by']
+            module.save()
+        
+        return Response({
+            'message': 'Module configuration updated successfully',
+            'module': {
+                'module_name': module.module_name,
+                'display_name': module.display_name,
+                'is_enabled': module.is_enabled,
+                'settings': module.settings,
+            }
+        }, status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED)
+
+
+class SystemConfigurationView(APIView):
+    """API for managing system-wide configuration settings"""
+    
+    def get(self, request):
+        """Get system configuration by key or all configurations"""
+        config_key = request.query_params.get('key')
+        
+        if config_key:
+            try:
+                config = SystemConfiguration.objects.get(config_key=config_key)
+                return Response({
+                    'config_key': config.config_key,
+                    'config_value': config.config_value,
+                    'description': config.description,
+                    'updated_at': config.updated_at
+                })
+            except SystemConfiguration.DoesNotExist:
+                return Response({'error': 'Configuration not found'}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            configs = SystemConfiguration.objects.all()
+            data = [{
+                'config_key': config.config_key,
+                'config_value': config.config_value,
+                'description': config.description,
+                'updated_at': config.updated_at
+            } for config in configs]
+            return Response(data)
+    
+    def post(self, request):
+        """Create or update system configuration"""
+        config_key = request.data.get('config_key')
+        config_value = request.data.get('config_value')
+        
+        if not config_key or config_value is None:
+            return Response(
+                {'error': 'config_key and config_value are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        config, created = SystemConfiguration.objects.update_or_create(
+            config_key=config_key,
+            defaults={
+                'config_value': config_value,
+                'description': request.data.get('description', ''),
+                'updated_by': request.data.get('updated_by', 'admin')
+            }
+        )
+        
+        return Response({
+            'message': 'Configuration updated successfully',
+            'config': {
+                'config_key': config.config_key,
+                'config_value': config.config_value,
+                'description': config.description
+            }
+        }, status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED)

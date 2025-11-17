@@ -12,6 +12,11 @@
       <!-- Connection Status Indicator -->
       <div class="flex items-center gap-3">
         <button 
+          (click)="toggleModuleSettings()"
+          class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+          ⚙️ Module Settings
+        </button>
+        <button 
           (click)="refreshData()"
           class="px-4 py-2 bg-factory-accent text-black rounded-lg hover:bg-opacity-90 transition">
           🔄 Refresh
@@ -299,3 +304,92 @@
     <p>⚡ Real-time WebSocket Updates | Powered by YOLO & DeepFace | Built with Angular 17 + Django</p>
   </footer>
 </div>
+
+<!-- ============================================================================
+     MODULE SETTINGS MODAL
+     ============================================================================ -->
+@if (showModuleSettings()) {
+  <div class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+    <div class="bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div class="p-6 border-b border-gray-700 sticky top-0 bg-gray-800 z-10">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="text-3xl">⚙️</span>
+            <h2 class="text-2xl font-bold text-white">Module Configuration</h2>
+          </div>
+          <button (click)="toggleModuleSettings()" class="text-gray-400 hover:text-white text-3xl">&times;</button>
+        </div>
+        <p class="text-gray-400 text-sm mt-2">Enable or disable modules based on customer requirements</p>
+      </div>
+      
+      <div class="p-6 space-y-4">
+        @for (module of modules(); track module.module_name) {
+          <div class="bg-gray-900 rounded-lg p-5 border transition-all"
+               [class.border-green-500]="module.is_enabled"
+               [class.border-gray-700]="!module.is_enabled">
+            <div class="flex items-start justify-between gap-4">
+              <!-- Module Info -->
+              <div class="flex-1">
+                <h3 class="text-xl font-bold mb-2"
+                    [class.text-white]="module.is_enabled"
+                    [class.text-gray-500]="!module.is_enabled">
+                  {{ module.display_name }}
+                </h3>
+                <p class="text-gray-400 text-sm mb-3">{{ module.description }}</p>
+                
+                <!-- Status Badge -->
+                <span class="px-3 py-1 rounded-full text-xs font-bold uppercase"
+                      [class.bg-green-500]="module.is_enabled"
+                      [class.bg-gray-600]="!module.is_enabled"
+                      class="text-white">
+                  {{ module.is_enabled ? 'Enabled' : 'Disabled' }}
+                </span>
+              </div>
+              
+              <!-- Toggle Switch -->
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  [checked]="module.is_enabled"
+                  (change)="toggleModule(module.module_name, !module.is_enabled)"
+                  class="sr-only peer">
+                <div class="w-14 h-7 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-cyan-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-600"></div>
+              </label>
+            </div>
+            
+            <!-- Settings Preview (if any) -->
+            @if (module.settings && Object.keys(module.settings).length > 0) {
+              <div class="mt-4 pt-4 border-t border-gray-700">
+                <div class="text-sm text-gray-400">
+                  <strong class="text-cyan-400">Settings:</strong>
+                  <pre class="mt-2 text-xs">{{ module.settings | json }}</pre>
+                </div>
+              </div>
+            }
+          </div>
+        }
+        
+        @empty {
+          <div class="bg-gray-900 rounded-lg p-12 text-center">
+            <span class="text-6xl mb-4 block">📦</span>
+            <p class="text-gray-400 text-lg">No modules configured</p>
+            <p class="text-gray-500 text-sm mt-2">Modules will appear here once initialized</p>
+          </div>
+        }
+      </div>
+      
+      <div class="p-6 border-t border-gray-700 bg-gray-850 flex gap-4">
+        <button 
+          (click)="toggleModuleSettings()"
+          class="flex-1 px-6 py-3 bg-gray-700 text-white font-bold rounded-lg hover:bg-gray-600 transition">
+          Close
+        </button>
+        <button 
+          (click)="loadModules(); toggleModuleSettings()"
+          class="flex-1 px-6 py-3 bg-cyan-600 text-white font-bold rounded-lg hover:bg-cyan-700 transition">
+          ✓ Apply & Close
+        </button>
+      </div>
+    </div>
+  </div>
+}

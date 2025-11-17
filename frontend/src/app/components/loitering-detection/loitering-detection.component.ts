@@ -32,6 +32,11 @@ export class LoiteringDetectionComponent implements OnInit, OnDestroy {
   lastDetection: any = null;
   isWebcamActive = false;
   isDetecting = false;
+  
+  // Configuration properties
+  timeThreshold: number = 10;  // Default 10 seconds
+  distanceThreshold: number = 150;  // Default 150 pixels
+  
   private subscription?: Subscription;
   private stream?: MediaStream;
   private frameLimiter = new FrameLimiter(RECOMMENDED_FPS.LOITERING); // 4 FPS
@@ -42,6 +47,9 @@ export class LoiteringDetectionComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     // Load today's violations
     this.loadViolations();
+    
+    // Load current configuration
+    this.loadLoiteringConfig();
     
     this.subscription = this.loiteringService.getLoiteringStats().subscribe(
       (data: any) => this.loiteringData = data,
@@ -228,6 +236,52 @@ export class LoiteringDetectionComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         alert('❌ Failed to resolve violation: ' + err.message);
+      }
+    });
+  }
+
+  // ============================================================================
+  // CONFIGURATION MANAGEMENT METHODS
+  // ============================================================================
+
+  /**
+   * Load current loitering detection configuration
+   */
+  loadLoiteringConfig(): void {
+    this.loiteringService.getLoiteringConfig().subscribe({
+      next: (config: any) => {
+        this.timeThreshold = config.time_threshold || 10;
+        this.distanceThreshold = config.distance_threshold || 150;
+      },
+      error: (err) => {
+        console.error('Failed to load loitering config:', err);
+      }
+    });
+  }
+
+  /**
+   * Update loitering configuration (called on input change)
+   */
+  updateLoiteringConfig(): void {
+    // Input validation
+    if (this.timeThreshold < 1) this.timeThreshold = 1;
+    if (this.timeThreshold > 60) this.timeThreshold = 60;
+    if (this.distanceThreshold < 50) this.distanceThreshold = 50;
+    if (this.distanceThreshold > 300) this.distanceThreshold = 300;
+  }
+
+  /**
+   * Save loitering configuration to backend
+   */
+  saveLoiteringConfig(): void {
+    this.loiteringService.updateLoiteringConfig(this.timeThreshold, this.distanceThreshold).subscribe({
+      next: (response: any) => {
+        alert('✅ Configuration saved successfully!');
+        console.log('Config updated:', response);
+      },
+      error: (err) => {
+        alert('❌ Failed to save configuration: ' + err.message);
+        console.error('Config update error:', err);
       }
     });
   }

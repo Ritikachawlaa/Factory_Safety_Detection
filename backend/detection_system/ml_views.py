@@ -340,3 +340,47 @@ def test_ml_services(request):
         'database': 'connected',
         'timestamp': timezone.now()
     })
+
+
+@api_view(['GET', 'POST'])
+def loitering_config_endpoint(request):
+    """
+    GET: Retrieve current loitering detection configuration
+    POST: Update loitering detection configuration (time_threshold, distance_threshold)
+    """
+    if not get_loitering_status:
+        return Response({'error': 'Loitering detection service not available'}, 
+                       status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    
+    try:
+        from app.services.loitering_service import get_loitering_config, update_loitering_config
+        
+        if request.method == 'GET':
+            config = get_loitering_config()
+            return Response({
+                'time_threshold': config['time_threshold'],
+                'distance_threshold': config['distance_threshold']
+            })
+        
+        elif request.method == 'POST':
+            time_threshold = request.data.get('time_threshold')
+            distance_threshold = request.data.get('distance_threshold')
+            
+            # Update configuration
+            updated_config = update_loitering_config(time_threshold, distance_threshold)
+            
+            # Log the change
+            SystemLog.objects.create(
+                log_type='system',
+                severity='info',
+                message=f"Loitering config updated: time={time_threshold}s, distance={distance_threshold}px",
+                details={'config': updated_config}
+            )
+            
+            return Response({
+                'message': 'Configuration updated successfully',
+                'config': updated_config
+            })
+    
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

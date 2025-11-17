@@ -1,3 +1,36 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Global Styles - Dark Theme */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #111827 !important; /* gray-900 */
+  color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  overflow-x: hidden;
+}
+
+html {
+  background-color: #111827 !important; /* gray-900 */
+}
+
+/* Remove default white background from Angular */
+app-root {
+  display: block;
+  background-color: #111827 !important; /* gray-900 */
+  min-height: 100vh;
+}
+
+/* Ensure all major containers use dark background */
+.app-container,
+router-outlet + * {
+  background-color: #111827 !important; /* gray-900 */
+}

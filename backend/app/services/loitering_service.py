@@ -5,8 +5,28 @@ from ultralytics import YOLO
 
 # --- CONFIGURATION ---
 MODEL_WEIGHTS_PATH = 'models/best_helmet.pt' # Using your helmet model
-LOITERING_TIME_THRESHOLD = 10  # Seconds
-GROUPING_DISTANCE_THRESHOLD = 150 # Pixels
+
+# Default values - can be overridden via API
+DEFAULT_LOITERING_TIME_THRESHOLD = 10  # Seconds
+DEFAULT_GROUPING_DISTANCE_THRESHOLD = 150  # Pixels
+
+# Global configuration that can be updated via API
+loitering_config = {
+    'time_threshold': DEFAULT_LOITERING_TIME_THRESHOLD,
+    'distance_threshold': DEFAULT_GROUPING_DISTANCE_THRESHOLD
+}
+
+def update_loitering_config(time_threshold=None, distance_threshold=None):
+    """Update loitering detection configuration"""
+    if time_threshold is not None:
+        loitering_config['time_threshold'] = time_threshold
+    if distance_threshold is not None:
+        loitering_config['distance_threshold'] = distance_threshold
+    return loitering_config
+
+def get_loitering_config():
+    """Get current loitering detection configuration"""
+    return loitering_config.copy()
 
 # Don't open camera on startup - it will block browser access!
 # The frontend will send frames via API instead.
@@ -60,6 +80,9 @@ def get_loitering_status(frame=None):
     if frame is None:
         return {"error": "No frame provided."}
 
+    # Get current configuration
+    distance_threshold = loitering_config['distance_threshold']
+    
     # 1. RUN DETECTION with optimized parameters
     results = model.predict(
         source=frame, 
@@ -95,7 +118,7 @@ def get_loitering_status(frame=None):
                     center_j = person_data[j][0]
                     distance = calculate_distance(center_i, center_j)
                     
-                    if distance < GROUPING_DISTANCE_THRESHOLD:
+                    if distance < distance_threshold:
                         active_groups += 1
                         checked_pairs.add((i, j))
                         break  # Count this as one group
@@ -103,5 +126,6 @@ def get_loitering_status(frame=None):
     # 4. RETURN STATUS
     return {
         "activeGroups": active_groups,
-        "totalPeople": len(person_data)
+        "totalPeople": len(person_data),
+        "config": loitering_config
     }

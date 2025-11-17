@@ -21,9 +21,14 @@ urlpatterns = [
     path('stats/attendance/', views.AttendanceStatsView.as_view(), name='attendance-stats'),
     path('dashboard/summary/', views.DashboardSummaryView.as_view(), name='dashboard-summary'),
     
+    # Configuration endpoints
+    path('config/modules/', views.ModuleConfigurationView.as_view(), name='module-config'),
+    path('config/system/', views.SystemConfigurationView.as_view(), name='system-config'),
+    
     # Live ML detection endpoints (webcam integration)
     path('live/helmet/', ml_views.helmet_detection_live, name='live-helmet'),
     path('live/loitering/', ml_views.loitering_detection_live, name='live-loitering'),
+    path('live/loitering/config/', ml_views.loitering_config_endpoint, name='loitering-config'),
     path('live/production/', ml_views.production_counter_live, name='live-production'),
     path('live/production/reset/', ml_views.production_counter_reset, name='live-production-reset'),
     path('live/attendance/', ml_views.attendance_system_live, name='live-attendance'),

@@ -1,5 +1,6 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { SocketService } from '../../services/socket.service';
+import { ConfigurationService, ModuleConfig } from '../../services/configuration.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -9,6 +10,14 @@ import { SocketService } from '../../services/socket.service';
 export class DashboardComponent {
   // Inject the centralized Socket Service
   private socketService = inject(SocketService);
+  private configService = inject(ConfigurationService);
+
+  // Module configuration
+  modules = signal<ModuleConfig[]>([]);
+  showModuleSettings = signal(false);
+  
+  // Expose Object to template
+  Object = Object;
 
   // ============================================================================
   // SIGNAL-BASED DATA (Auto-updates from WebSocket)
@@ -113,5 +122,59 @@ export class DashboardComponent {
       default:
         return 'ℹ️';
     }
+  }
+
+  // ============================================================================
+  // MODULE CONFIGURATION METHODS
+  // ============================================================================
+
+  ngOnInit(): void {
+    this.loadModules();
+  }
+
+  /**
+   * Load module configurations
+   */
+  loadModules(): void {
+    this.configService.getModules().subscribe({
+      next: (modules) => {
+        this.modules.set(modules);
+      },
+      error: (err) => {
+        console.error('Failed to load modules:', err);
+      }
+    });
+  }
+
+  /**
+   * Toggle module settings panel
+   */
+  toggleModuleSettings(): void {
+    this.showModuleSettings.set(!this.showModuleSettings());
+  }
+
+  /**
+   * Toggle a module on/off
+   */
+  toggleModule(moduleName: string, enabled: boolean): void {
+    this.configService.toggleModule(moduleName, enabled).subscribe({
+      next: (response) => {
+        console.log('Module toggled:', response);
+        this.loadModules(); // Reload modules
+        alert(`✅ Module ${enabled ? 'enabled' : 'disabled'} successfully!`);
+      },
+      error: (err) => {
+        console.error('Failed to toggle module:', err);
+        alert('❌ Failed to update module status');
+      }
+    });
+  }
+
+  /**
+   * Check if a module is enabled
+   */
+  isModuleEnabled(moduleName: string): boolean {
+    const module = this.modules().find(m => m.module_name === moduleName);
+    return module?.is_enabled || false;
   }
 }

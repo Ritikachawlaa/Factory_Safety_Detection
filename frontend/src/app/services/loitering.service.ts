@@ -17,6 +17,7 @@ export interface LoiteringStatus {
 export class LoiteringService {
   private apiUrl = `${environment.apiUrl}/live/loitering/`;
   private statsUrl = `${environment.apiUrl}/stats/loitering/`;
+  private configUrl = `${environment.apiUrl}/live/loitering/config/`;
 
   constructor(private http: HttpClient) {}
 
@@ -33,5 +34,18 @@ export class LoiteringService {
   // Get historical records
   getLoiteringRecords(limit: number = 10): Observable<LoiteringStatus[]> {
     return this.http.get<LoiteringStatus[]>(`${environment.apiUrl}/loitering-detection/?limit=${limit}`);
+  }
+
+  // Get loitering configuration
+  getLoiteringConfig(): Observable<any> {
+    return this.http.get<any>(this.configUrl);
+  }
+
+  // Update loitering configuration
+  updateLoiteringConfig(timeThreshold: number, distanceThreshold: number): Observable<any> {
+    return this.http.post<any>(this.configUrl, {
+      time_threshold: timeThreshold,
+      distance_threshold: distanceThreshold
+    });
   }
 }
