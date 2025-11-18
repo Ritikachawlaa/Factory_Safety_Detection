@@ -7,6 +7,7 @@ import { ProductionCounterComponent } from './components/production-counter/prod
 import { AttendanceSystemComponent } from './components/attendance-system/attendance-system.component';
 import { LoginComponent } from './components/login/login.component';
 import { AuthGuard } from './guards/auth.guard';
+import { CameraManagementComponent } from './components/camera-management/camera-management.component';
 
 const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
@@ -15,7 +16,8 @@ const routes: Routes = [
   { path: 'helmet-detection', component: HelmetDetectionComponent, canActivate: [AuthGuard] },
   { path: 'loitering-detection', component: LoiteringDetectionComponent, canActivate: [AuthGuard] },
   { path: 'production-counter', component: ProductionCounterComponent, canActivate: [AuthGuard] },
-  { path: 'attendance-system', component: AttendanceSystemComponent, canActivate: [AuthGuard] }
+  { path: 'attendance-system', component: AttendanceSystemComponent, canActivate: [AuthGuard] },
+  { path: 'camera-management', component: CameraManagementComponent, canActivate: [AuthGuard] }
 ];
 
 @NgModule({

@@ -81,22 +81,27 @@ def helmet_detection_live(request):
                        status=status.HTTP_503_SERVICE_UNAVAILABLE)
     
     try:
-        # Get frame from request (base64 or file upload)
-        frame_data = request.data.get('frame')
-        
-        if not frame_data:
-            return Response({'error': 'No frame data provided'}, 
-                          status=status.HTTP_400_BAD_REQUEST)
-        
-        # Decode frame (assuming base64 encoding from frontend)
-        import base64
-        frame_bytes = base64.b64decode(frame_data.split(',')[1] if ',' in frame_data else frame_data)
-        nparr = np.frombuffer(frame_bytes, np.uint8)
-        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        
+        camera_id = request.data.get('camera_id')
+        if not camera_id:
+            return Response({'error': 'No camera_id provided'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            from .models import Camera
+            camera = Camera.objects.get(id=camera_id, is_active=True)
+        except Camera.DoesNotExist:
+            return Response({'error': 'Camera not found or inactive'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Fetch frame from CCTV stream
+        cap = cv2.VideoCapture(camera.stream_url)
+        if not cap.isOpened():
+            return Response({'error': 'Unable to open camera stream'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        ret, frame = cap.read()
+        cap.release()
+        if not ret or frame is None:
+            return Response({'error': 'Failed to read frame from camera'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         # Run ML detection in thread pool (non-blocking)
         result = run_ml_inference(get_helmet_detection_status, frame)
-        
+
         # Save to database
         detection = HelmetDetection.objects.create(
             total_people=result['totalPeople'],
@@ -104,10 +109,11 @@ def helmet_detection_live(request):
             violation_count=result['violationCount'],
             frame_data={
                 'detections': result.get('detections', []),
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now().isoformat(),
+                'camera_id': camera_id
             }
         )
-        
+
         # Log the event
         if result['violationCount'] > 0:
             SystemLog.objects.create(
@@ -116,7 +122,7 @@ def helmet_detection_live(request):
                 message=f"Helmet violation detected: {result['violationCount']} person(s)",
                 details=result
             )
-        
+
         return Response({
             'id': detection.id,
             'timestamp': detection.timestamp,
@@ -125,7 +131,7 @@ def helmet_detection_live(request):
             'violationCount': detection.violation_count,
             'complianceRate': detection.compliance_rate
         })
-        
+
     except Exception as e:
         SystemLog.objects.create(
             log_type='helmet',
@@ -145,30 +151,38 @@ def loitering_detection_live(request):
                        status=status.HTTP_503_SERVICE_UNAVAILABLE)
     
     try:
-        frame_data = request.data.get('frame')
-        if not frame_data:
-            return Response({'error': 'No frame data provided'}, 
-                          status=status.HTTP_400_BAD_REQUEST)
-        
-        # Decode frame
-        import base64
-        frame_bytes = base64.b64decode(frame_data.split(',')[1] if ',' in frame_data else frame_data)
-        nparr = np.frombuffer(frame_bytes, np.uint8)
-        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        
+        camera_id = request.data.get('camera_id')
+        if not camera_id:
+            return Response({'error': 'No camera_id provided'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            from .models import Camera
+            camera = Camera.objects.get(id=camera_id, is_active=True)
+        except Camera.DoesNotExist:
+            return Response({'error': 'Camera not found or inactive'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Fetch frame from CCTV stream
+        cap = cv2.VideoCapture(camera.stream_url)
+        if not cap.isOpened():
+            return Response({'error': 'Unable to open camera stream'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        ret, frame = cap.read()
+        cap.release()
+        if not ret or frame is None:
+            return Response({'error': 'Failed to read frame from camera'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         # Run ML detection in thread pool (non-blocking)
         result = run_ml_inference(get_loitering_status, frame)
-        
+
         # Save to database
         detection = LoiteringDetection.objects.create(
             active_groups=result['activeGroups'],
             alert_triggered=result['activeGroups'] > 0,
             group_details={
                 'groups': result.get('groups', []),
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now().isoformat(),
+                'camera_id': camera_id
             }
         )
-        
+
         # Log alert
         if detection.alert_triggered:
             SystemLog.objects.create(
@@ -177,14 +191,14 @@ def loitering_detection_live(request):
                 message=f"Loitering detected: {result['activeGroups']} group(s)",
                 details=result
             )
-        
+
         return Response({
             'id': detection.id,
             'timestamp': detection.timestamp,
             'activeGroups': detection.active_groups,
             'alertTriggered': detection.alert_triggered
         })
-        
+
     except Exception as e:
         import traceback
         error_details = traceback.format_exc()
@@ -208,37 +222,45 @@ def production_counter_live(request):
                        status=status.HTTP_503_SERVICE_UNAVAILABLE)
     
     try:
-        frame_data = request.data.get('frame')
-        if not frame_data:
-            return Response({'error': 'No frame data provided'}, 
-                          status=status.HTTP_400_BAD_REQUEST)
-        
-        # Decode frame
-        import base64
-        frame_bytes = base64.b64decode(frame_data.split(',')[1] if ',' in frame_data else frame_data)
-        nparr = np.frombuffer(frame_bytes, np.uint8)
-        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        
+        camera_id = request.data.get('camera_id')
+        if not camera_id:
+            return Response({'error': 'No camera_id provided'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            from .models import Camera
+            camera = Camera.objects.get(id=camera_id, is_active=True)
+        except Camera.DoesNotExist:
+            return Response({'error': 'Camera not found or inactive'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Fetch frame from CCTV stream
+        cap = cv2.VideoCapture(camera.stream_url)
+        if not cap.isOpened():
+            return Response({'error': 'Unable to open camera stream'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        ret, frame = cap.read()
+        cap.release()
+        if not ret or frame is None:
+            return Response({'error': 'Failed to read frame from camera'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         # Run ML detection in thread pool (non-blocking)
         result = run_ml_inference(get_production_count, frame)
-        
+
         # Save to database
         counter = ProductionCounter.objects.create(
             item_count=result['itemCount'],
             session_date=timezone.now().date(),
             details={
                 'items': result.get('items', []),
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now().isoformat(),
+                'camera_id': camera_id
             }
         )
-        
+
         return Response({
             'id': counter.id,
             'timestamp': counter.timestamp,
             'itemCount': counter.item_count,
             'sessionDate': counter.session_date
         })
-        
+
     except Exception as e:
         SystemLog.objects.create(
             log_type='production',
@@ -283,24 +305,31 @@ def attendance_system_live(request):
                        status=status.HTTP_503_SERVICE_UNAVAILABLE)
     
     try:
-        frame_data = request.data.get('frame')
-        if not frame_data:
-            return Response({'error': 'No frame data provided'}, 
-                          status=status.HTTP_400_BAD_REQUEST)
-        
-        # Decode frame
-        import base64
-        frame_bytes = base64.b64decode(frame_data.split(',')[1] if ',' in frame_data else frame_data)
-        nparr = np.frombuffer(frame_bytes, np.uint8)
-        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        
+        camera_id = request.data.get('camera_id')
+        if not camera_id:
+            return Response({'error': 'No camera_id provided'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            from .models import Camera
+            camera = Camera.objects.get(id=camera_id, is_active=True)
+        except Camera.DoesNotExist:
+            return Response({'error': 'Camera not found or inactive'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Fetch frame from CCTV stream
+        cap = cv2.VideoCapture(camera.stream_url)
+        if not cap.isOpened():
+            return Response({'error': 'Unable to open camera stream'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        ret, frame = cap.read()
+        cap.release()
+        if not ret or frame is None:
+            return Response({'error': 'Failed to read frame from camera'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         # Run ML detection in thread pool (non-blocking)
         result = run_ml_inference(get_attendance_status, frame)
-        
+
         # Format response to match frontend expectations
         last_person = result.get('lastPersonSeen', '---')
         is_recognized = last_person != '---'
-        
+
         return Response({
             'recognized_person': last_person if is_recognized else None,
             'status': 'Recognized' if is_recognized else 'Not recognized',
@@ -308,7 +337,7 @@ def attendance_system_live(request):
             'verified_count': result.get('verifiedCount', 0),
             'attendance_log': result.get('attendanceLog', [])
         })
-        
+
     except Exception as e:
         import traceback
         error_details = traceback.format_exc()

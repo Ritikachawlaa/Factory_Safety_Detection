@@ -1,8 +1,15 @@
 from rest_framework import serializers
 from .models import (
     HelmetDetection, LoiteringDetection, ProductionCounter,
-    Employee, AttendanceRecord, SystemLog, DailyReport
+    Employee, AttendanceRecord, SystemLog, DailyReport, Camera
 )
+# Camera Serializer
+
+class CameraSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Camera
+        fields = '__all__'
+        read_only_fields = ('id', 'added_at', 'updated_at')
 
 
 class HelmetDetectionSerializer(serializers.ModelSerializer):

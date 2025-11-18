@@ -21,9 +21,10 @@ export class ProductionService {
 
   constructor(private http: HttpClient) {}
 
-  // Send webcam frame for live detection
-  detectFromFrame(frameData: string): Observable<ProductionCount> {
-    return this.http.post<ProductionCount>(this.apiUrl, { frame: frameData });
+
+  // Send camera_id for live detection
+  detectFromCamera(camera_id: number): Observable<ProductionCount> {
+    return this.http.post<ProductionCount>(this.apiUrl, { camera_id });
   }
 
   // Reset production counter

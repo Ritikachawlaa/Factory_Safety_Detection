@@ -102,6 +102,13 @@
           <span class="text-xl">✓</span>
           <span *ngIf="!isSidebarCollapsed" class="font-medium group-hover:text-white">Attendance System</span>
         </a>
+
+        <a routerLink="/camera-management" 
+           routerLinkActive="bg-factory-accent text-black"
+           class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 transition group w-full">
+          <span class="text-xl">🎥</span>
+          <span *ngIf="!isSidebarCollapsed" class="font-medium group-hover:text-white">Camera Management</span>
+        </a>
       </nav>
 
       <!-- User Info & Logout -->

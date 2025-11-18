@@ -1,0 +1,58 @@
+<div class="camera-management-container">
+  <h2>Camera Management</h2>
+  <button (click)="openAddCamera()">Add Camera</button>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Location</th>
+        <th>Type</th>
+        <th>Stream URL</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let camera of cameras">
+        <td>{{ camera.name }}</td>
+        <td>{{ camera.location }}</td>
+        <td>{{ camera.camera_type }}</td>
+        <td>{{ camera.stream_url }}</td>
+        <td>{{ camera.is_active ? 'Active' : 'Inactive' }}</td>
+        <td>
+          <button (click)="editCamera(camera)">Edit</button>
+          <button (click)="deleteCamera(camera.id)">Delete</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Add/Edit Camera Modal -->
+  <div *ngIf="showModal" class="modal">
+    <div class="modal-content">
+      <h3>{{ editingCamera ? 'Edit Camera' : 'Add Camera' }}</h3>
+      <form (ngSubmit)="saveCamera()">
+        <label>Name: <input [(ngModel)]="cameraForm.name" name="name" required /></label>
+        <label>Location: <input [(ngModel)]="cameraForm.location" name="location" /></label>
+        <label>Type:
+          <select [(ngModel)]="cameraForm.camera_type" name="camera_type" required>
+            <option value="rtsp">RTSP</option>
+            <option value="http">HTTP</option>
+            <option value="usb">USB</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+        <label>Stream URL: <input [(ngModel)]="cameraForm.stream_url" name="stream_url" required /></label>
+        <label>Status:
+          <select [(ngModel)]="cameraForm.is_active" name="is_active">
+            <option [ngValue]="true">Active</option>
+            <option [ngValue]="false">Inactive</option>
+          </select>
+        </label>
+        <label>Notes: <textarea [(ngModel)]="cameraForm.notes" name="notes"></textarea></label>
+        <button type="submit">Save</button>
+        <button type="button" (click)="closeModal()">Cancel</button>
+      </form>
+    </div>
+  </div>
+</div>

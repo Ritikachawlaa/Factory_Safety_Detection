@@ -206,6 +206,36 @@ class SystemConfiguration(models.Model):
         return f"{self.config_key}: {self.config_value}"
 
 
+
+# Camera model for CCTV/RTSP/HTTP camera streams
+class Camera(models.Model):
+    CAMERA_TYPE_CHOICES = [
+        ('rtsp', 'RTSP'),
+        ('http', 'HTTP'),
+        ('usb', 'USB'),
+        ('other', 'Other'),
+    ]
+    name = models.CharField(max_length=100)
+    location = models.CharField(max_length=255, blank=True)
+    stream_url = models.CharField(max_length=500, unique=True)
+    camera_type = models.CharField(max_length=10, choices=CAMERA_TYPE_CHOICES, default='rtsp')
+    is_active = models.BooleanField(default=True)
+    added_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        db_table = 'cameras'
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['name']),
+            models.Index(fields=['is_active']),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.camera_type}) - {self.location}"
+
+
 class ModuleConfiguration(models.Model):
     """Model to enable/disable modules and configure their settings"""
     module_name = models.CharField(

@@ -1,7 +1,24 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from .models import Camera
+from .serializers import CameraSerializer
+
+# Camera CRUD API
+class CameraViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing cameras (CCTV/RTSP/HTTP/USB)"""
+    queryset = Camera.objects.all()
+    serializer_class = CameraSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        is_active = self.request.query_params.get('is_active')
+        if is_active is not None:
+            queryset = queryset.filter(is_active=is_active.lower() == 'true')
+        return queryset
 from django.db.models import Count, Avg, Sum, Q
 from django.utils import timezone
 from datetime import datetime, timedelta

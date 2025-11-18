@@ -13,30 +13,25 @@
     <div class="lg:col-span-2 bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
       <h2 class="text-2xl font-bold text-white mb-4">📹 Live Box Counting</h2>
       
-      <div class="bg-black rounded-lg overflow-hidden mb-4">
-        <video #videoElement autoplay playsinline class="w-full h-auto"></video>
-        <canvas #canvasElement style="display: none;"></canvas>
+      <!-- CCTV Camera Selection -->
+      <div class="mb-4">
+        <label for="cameraSelect" class="block text-gray-300 mb-2">Select CCTV Camera</label>
+        <select id="cameraSelect" class="w-full px-4 py-2 rounded bg-gray-800 text-white border border-gray-700" [(ngModel)]="selectedCameraId">
+          <option [ngValue]="null">-- Select Camera --</option>
+          <option *ngFor="let camera of cameras" [ngValue]="camera.id">{{ camera.name }} ({{ camera.location }})</option>
+        </select>
       </div>
-      
-      <!-- Camera Controls -->
-      <div class="grid grid-cols-3 gap-3 mb-4">
-        <button 
-          (click)="toggleWebcam()" 
-          [class.bg-red-600]="isWebcamActive"
-          [class.bg-green-600]="!isWebcamActive"
-          class="px-4 py-3 text-white font-semibold rounded-lg hover:opacity-90 transition">
-          {{ isWebcamActive ? '⏸ Stop Camera' : '▶ Start Camera' }}
-        </button>
+      <!-- Detect Button and Reset -->
+      <div class="grid grid-cols-2 gap-3 mb-4">
         <button 
           (click)="countProduction()" 
-          [disabled]="!isWebcamActive || isCounting"
+          [disabled]="!selectedCameraId || isCounting"
           class="px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition disabled:bg-gray-600 disabled:cursor-not-allowed">
           {{ isCounting ? '⏳ Counting...' : '📦 Count Boxes' }}
         </button>
         <button 
           (click)="resetCounter()" 
-          [disabled]="!isWebcamActive"
-          class="px-4 py-3 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition disabled:bg-gray-600 disabled:cursor-not-allowed">
+          class="px-4 py-3 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition">
           🔄 Reset Counter
         </button>
       </div>

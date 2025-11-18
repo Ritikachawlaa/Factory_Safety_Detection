@@ -1,7 +1,7 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { ProductionService, ProductionCount } from '../../services/production.service';
-import { FrameLimiter, RECOMMENDED_FPS } from '../../utils/frame-limiter';
+import { CameraService, Camera } from '../../services/camera.service';
 
 @Component({
   selector: 'app-production-counter',
@@ -9,20 +9,16 @@ import { FrameLimiter, RECOMMENDED_FPS } from '../../utils/frame-limiter';
   styleUrls: ['./production-counter.component.css']
 })
 export class ProductionCounterComponent implements OnInit, OnDestroy {
-  @ViewChild('videoElement') videoElement!: ElementRef<HTMLVideoElement>;
-  @ViewChild('canvasElement') canvasElement!: ElementRef<HTMLCanvasElement>;
-
   productionData: ProductionCount = { itemCount: 0 };
   lastDetection: any = null;
   sessionTotal = 0;
-  isWebcamActive = false;
+  cameras: Camera[] = [];
+  selectedCameraId: number | null = null;
   isCounting = false;
   private subscription?: Subscription;
-  private stream?: MediaStream;
-  private frameLimiter = new FrameLimiter(RECOMMENDED_FPS.PRODUCTION); // 12 FPS
-  private detectionInterval?: number;
+  private cameraSub?: Subscription;
 
-  constructor(private productionService: ProductionService) {}
+  constructor(private productionService: ProductionService, private cameraService: CameraService) {}
 
   ngOnInit(): void {
     this.subscription = this.productionService.getProductionStats().subscribe(
@@ -34,107 +30,19 @@ export class ProductionCounterComponent implements OnInit, OnDestroy {
       },
       (error: any) => console.error('Error:', error)
     );
-  }
-
-  async toggleWebcam(): Promise<void> {
-    if (this.isWebcamActive) {
-      this.stopWebcam();
-    } else {
-      await this.startWebcam();
-    }
-  }
-
-  async startWebcam(): Promise<void> {
-    try {
-      if (this.stream) {
-        this.stream.getTracks().forEach(track => track.stop());
-      }
-      
-      this.stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          width: { ideal: 640 },
-          height: { ideal: 480 },
-          facingMode: 'user'
-        } 
-      });
-      this.videoElement.nativeElement.srcObject = this.stream;
-      this.isWebcamActive = true;
-    } catch (error: any) {
-      console.error('Error accessing webcam:', error);
-      let errorMsg = 'Failed to access webcam.';
-      if (error.name === 'NotReadableError') {
-        errorMsg = 'Camera is being used by another application. Please close other apps using the camera and try again.';
-      } else if (error.name === 'NotAllowedError') {
-        errorMsg = 'Camera permission denied. Please allow camera access.';
-      }
-      alert(errorMsg);
-      this.isWebcamActive = false;
-    }
-  }
-
-  stopWebcam(): void {
-    if (this.stream) {
-      this.stream.getTracks().forEach(track => track.stop());
-      this.videoElement.nativeElement.srcObject = null;
-      this.isWebcamActive = false;
-      this.isCounting = false;
-      this.frameLimiter.reset();
-      
-      // Clear detection interval
-      if (this.detectionInterval) {
-        clearInterval(this.detectionInterval);
-        this.detectionInterval = undefined;
-      }
-    }
+    // Fetch available cameras
+    this.cameraSub = this.cameraService.getCameras().subscribe(
+      (cameras) => this.cameras = cameras.filter(c => c.is_active),
+      (error) => console.error('Failed to load cameras', error)
+    );
   }
 
   countProduction(): void {
-    if (!this.isWebcamActive || this.isCounting) return;
-
-    // Start continuous detection with frame rate limiting
+    if (!this.selectedCameraId || this.isCounting) return;
     this.isCounting = true;
-    this.frameLimiter.reset();
-    
-    // Process frames at recommended FPS (12 FPS for production)
-    this.detectionInterval = window.setInterval(() => {
-      if (!this.isWebcamActive || !this.isCounting) {
-        if (this.detectionInterval) {
-          clearInterval(this.detectionInterval);
-          this.detectionInterval = undefined;
-        }
-        return;
-      }
-      
-      // Only process if frame limiter allows
-      if (this.frameLimiter.shouldProcessFrame()) {
-        this.processFrame();
-      }
-    }, 100); // Check every 100ms, but actual processing limited by FrameLimiter
-  }
-
-  private processFrame(): void {
-    const video = this.videoElement.nativeElement;
-    const canvas = this.canvasElement.nativeElement;
-    const context = canvas.getContext('2d');
-
-    if (!context || !video.videoWidth) return;
-
-    // Set canvas size to match video
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    // Draw current video frame to canvas
-    context.drawImage(video, 0, 0);
-
-    // Convert canvas to base64 (compressed JPEG for better performance)
-    const frameData = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
-
-    // Send to backend for detection
-    this.productionService.detectFromFrame(frameData).subscribe({
+    this.productionService.detectFromCamera(this.selectedCameraId).subscribe({
       next: (result: any) => {
-        console.log('Production counting result:', result);
         const itemCount = result.item_count || 0;
-        
         if (itemCount > 0) {
           this.lastDetection = {
             itemCount: itemCount,
@@ -143,9 +51,11 @@ export class ProductionCounterComponent implements OnInit, OnDestroy {
           this.sessionTotal += itemCount;
           this.productionData.itemCount = this.sessionTotal;
         }
+        this.isCounting = false;
       },
       error: (error: any) => {
         console.error('Counting error:', error);
+        this.isCounting = false;
       }
     });
   }
@@ -171,9 +81,6 @@ export class ProductionCounterComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscription?.unsubscribe();
-    this.stopWebcam();
-    if (this.detectionInterval) {
-      clearInterval(this.detectionInterval);
-    }
+    this.cameraSub?.unsubscribe();
   }
 }

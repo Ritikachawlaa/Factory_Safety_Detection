@@ -11,6 +11,7 @@ import { LoiteringDetectionComponent } from './components/loitering-detection/lo
 import { ProductionCounterComponent } from './components/production-counter/production-counter.component';
 import { AttendanceSystemComponent } from './components/attendance-system/attendance-system.component';
 import { LoginComponent } from './components/login/login.component';
+import { CameraManagementComponent } from './components/camera-management/camera-management.component';
 import { AppRoutingModule } from './app-routing.module';
 
 @NgModule({
@@ -21,7 +22,8 @@ import { AppRoutingModule } from './app-routing.module';
     LoiteringDetectionComponent,
     ProductionCounterComponent,
     AttendanceSystemComponent,
-    LoginComponent
+    LoginComponent,
+    CameraManagementComponent
   ],
   imports: [
     BrowserModule,

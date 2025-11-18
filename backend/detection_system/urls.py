@@ -10,6 +10,7 @@ router.register(r'employees', views.EmployeeViewSet, basename='employee')
 router.register(r'attendance', views.AttendanceRecordViewSet, basename='attendance')
 router.register(r'system-logs', views.SystemLogViewSet, basename='system-log')
 router.register(r'daily-reports', views.DailyReportViewSet, basename='daily-report')
+router.register(r'cameras', views.CameraViewSet, basename='camera')
 
 urlpatterns = [
     path('', include(router.urls)),

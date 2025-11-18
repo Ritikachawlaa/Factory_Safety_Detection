@@ -22,9 +22,10 @@ export class HelmetService {
 
   constructor(private http: HttpClient) {}
 
-  // Send webcam frame for live detection
-  detectFromFrame(frameData: string): Observable<HelmetStatus> {
-    return this.http.post<HelmetStatus>(this.apiUrl, { frame: frameData });
+
+  // Send camera_id for live detection
+  detectFromCamera(camera_id: number): Observable<HelmetStatus> {
+    return this.http.post<HelmetStatus>(this.apiUrl, { camera_id });
   }
 
   // Get statistics
