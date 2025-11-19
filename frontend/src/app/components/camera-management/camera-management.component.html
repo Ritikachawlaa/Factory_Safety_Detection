@@ -42,7 +42,7 @@
             <option value="other">Other</option>
           </select>
         </label>
-        <label>Stream URL: <input [(ngModel)]="cameraForm.stream_url" name="stream_url" required /></label>
+        <label>Stream URL: <input type="text" [(ngModel)]="cameraForm.stream_url" name="stream_url" required /></label>
         <label>Status:
           <select [(ngModel)]="cameraForm.is_active" name="is_active">
             <option [ngValue]="true">Active</option>
