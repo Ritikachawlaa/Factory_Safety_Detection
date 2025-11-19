@@ -183,8 +183,8 @@ export class ViolationService {
 
   loadProductionRecords(date?: string): void {
     const url = date 
-      ? `${this.API_URL}/production/?date=${date}`
-      : `${this.API_URL}/production/today/`;
+      ? `${this.API_URL}/production-counter/?date=${date}`
+      : `${this.API_URL}/production-counter/today/`;
     
     this.http.get<ProductionRecord[]>(url)
       .pipe(
