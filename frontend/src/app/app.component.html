@@ -3,42 +3,8 @@
   <!-- ============================================================================
        MASTER ALERT HEADER (Global - Above Everything)
        ============================================================================ -->
-  <div class="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
-       [ngClass]="{
-         'bg-red-600 animate-pulse': hasViolations(),
-         'bg-gray-900': !hasViolations()
-       }">
-    <div class="container mx-auto px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center gap-4">
-        @if (hasViolations()) {
-          <span class="text-3xl">🚨</span>
-          <div>
-            <h2 class="text-white font-bold text-lg">CRITICAL ALERT</h2>
-            <p class="text-white text-sm">{{ latestAlert()?.message || 'System Violation Detected' }}</p>
-          </div>
-        } @else {
-          <span class="text-2xl">✅</span>
-          <h2 class="text-green-400 font-semibold">All Systems Normal</h2>
-        }
-      </div>
-      
-      <div class="flex items-center gap-3">
-        @if (alertCount() > 0) {
-          <span class="px-3 py-1 bg-white text-red-600 rounded-full font-bold">
-            {{ alertCount() }} Alert{{ alertCount() > 1 ? 's' : '' }}
-          </span>
-          <button 
-            (click)="clearAllAlerts()"
-            class="px-4 py-2 bg-white text-red-600 rounded-lg font-semibold hover:bg-gray-100 transition">
-            Dismiss All
-          </button>
-        }
-      </div>
-    </div>
-  </div>
-
-  <!-- Spacer for fixed header -->
-  <div class="h-16"></div>
+  <!-- No global alert header: WebSocket/alert logic removed. -->
+  <div class="h-0"></div>
 
   <div class="flex min-h-screen bg-factory-dark">
     <!-- ============================================================================

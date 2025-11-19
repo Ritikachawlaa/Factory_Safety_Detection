@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 
 export interface Camera {
@@ -22,7 +23,9 @@ export class CameraService {
   constructor(private http: HttpClient) {}
 
   getCameras(): Observable<Camera[]> {
-    return this.http.get<Camera[]>(this.apiUrl);
+    return this.http.get<any>(this.apiUrl).pipe(
+      map((response: any) => Array.isArray(response) ? response : response.results || [])
+    );
   }
 
   getCamera(id: number): Observable<Camera> {

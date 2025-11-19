@@ -1,41 +1,43 @@
-import { Component, computed, inject, signal } from '@angular/core';
-import { SocketService } from '../../services/socket.service';
+import { Component, computed, inject, signal, OnDestroy } from '@angular/core';
+
+// Define the alert type expected by the template
+type DashboardAlert = {
+  id: string;
+  module: string;
+  message: string;
+  severity: 'critical' | 'warning' | 'info';
+  timestamp: string;
+};
 import { ConfigurationService, ModuleConfig } from '../../services/configuration.service';
+import { DashboardService } from '../../services/dashboard.service';
 
 @Component({
   selector: 'app-dashboard',
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
-export class DashboardComponent {
+export class DashboardComponent implements OnDestroy {
   // Inject the centralized Socket Service
-  private socketService = inject(SocketService);
   private configService = inject(ConfigurationService);
+  private dashboardService = inject(DashboardService);
+  private pollingInterval: any;
 
   // Module configuration
   modules = signal<ModuleConfig[]>([]);
   showModuleSettings = signal(false);
-  
   // Expose Object to template
   Object = Object;
 
-  // ============================================================================
-  // SIGNAL-BASED DATA (Auto-updates from WebSocket)
-  // ============================================================================
-
-  // Direct access to real-time data Signals
-  helmetData = this.socketService.helmetData;
-  loiteringData = this.socketService.loiteringData;
-  productionData = this.socketService.productionData;
-  attendanceData = this.socketService.attendanceData;
-  
-  // Critical alerts for the banner
-  criticalAlerts = this.socketService.criticalAlerts;
-  latestAlert = this.socketService.latestAlert;
-  
-  // Connection status
-  connectionStatus = this.socketService.connectionStatus;
-  isConnected = this.socketService.isConnected;
+  // --- Dummy data for dashboard (replace with HTTP polling if needed) ---
+  helmetData = signal({ totalPeople: 0, compliantCount: 0, violationCount: 0 });
+  loiteringData = signal({ activeGroups: 0 });
+  productionData = signal({ itemCount: 0, itemsPerMinute: 0 });
+  attendanceData = signal({ verifiedCount: 0, lastPersonSeen: '---' });
+  // Provide a correct type for alerts
+  criticalAlerts = signal<DashboardAlert[]>([]);
+  latestAlert = computed(() => this.criticalAlerts()[0] || null);
+  connectionStatus = signal('disconnected');
+  isConnected = signal(false);
 
   // ============================================================================
   // COMPUTED SIGNALS (Derived data - auto-recalculates)
@@ -46,7 +48,7 @@ export class DashboardComponent {
    */
   helmetComplianceRate = computed(() => {
     const data = this.helmetData();
-    if (data.totalPeople === 0) return 100;
+    if (!data.totalPeople) return 100;
     return Math.round((data.compliantCount / data.totalPeople) * 100);
   });
 
@@ -80,21 +82,15 @@ export class DashboardComponent {
    * Clear a specific alert
    */
   clearAlert(alertId: string): void {
-    this.socketService.clearAlert(alertId);
+    // No-op: WebSocket removed. Implement HTTP alert clearing if needed.
   }
 
-  /**
-   * Clear all alerts
-   */
   clearAllAlerts(): void {
-    this.socketService.clearAllAlerts();
+    // No-op: WebSocket removed. Implement HTTP alert clearing if needed.
   }
 
-  /**
-   * Manually refresh all data
-   */
   refreshData(): void {
-    this.socketService.requestAllUpdates();
+    // No-op: WebSocket removed. Implement HTTP polling if needed.
   }
 
   /**
@@ -130,6 +126,48 @@ export class DashboardComponent {
 
   ngOnInit(): void {
     this.loadModules();
+    this.startPolling();
+  }
+
+  ngOnDestroy(): void {
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+    }
+  }
+
+  startPolling(): void {
+    // Poll every 5 seconds
+    this.fetchDashboardSummary();
+    this.pollingInterval = setInterval(() => {
+      this.fetchDashboardSummary();
+    }, 5000);
+  }
+
+  fetchDashboardSummary(): void {
+    this.dashboardService.getDashboardSummary().subscribe({
+      next: (summary) => {
+        // Update signals with summary data
+        this.helmetData.set({
+          totalPeople: summary.helmet_violations + summary.attendance.present, // Dummy logic for demo
+          compliantCount: summary.attendance.present,
+          violationCount: summary.helmet_violations
+        });
+        this.loiteringData.set({
+          activeGroups: summary.loitering_alerts
+        });
+        this.productionData.set({
+          itemCount: summary.production_count,
+          itemsPerMinute: 0 // Not available in summary
+        });
+        this.attendanceData.set({
+          verifiedCount: summary.attendance.present,
+          lastPersonSeen: '---' // Not available in summary
+        });
+      },
+      error: (err) => {
+        console.error('Failed to fetch dashboard summary:', err);
+      }
+    });
   }
 
   /**

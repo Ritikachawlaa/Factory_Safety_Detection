@@ -1,7 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
 import { Router, NavigationEnd } from '@angular/router';
 import { AuthService } from './services/auth.service';
-import { SocketService } from './services/socket.service';
 import { filter } from 'rxjs/operators';
 
 @Component({
@@ -14,13 +13,7 @@ export class AppComponent {
   showSidebar = false;
   isSidebarCollapsed = false;
 
-  // Inject SocketService for global alert monitoring
-  private socketService = inject(SocketService);
-  
-  // Global alert signals
-  latestAlert = this.socketService.latestAlert;
-  hasViolations = this.socketService.hasViolations;
-  alertCount = this.socketService.alertCount;
+  // WebSocket/SocketService removed. No global alert signals.
 
   constructor(
     public authService: AuthService,
@@ -42,19 +35,5 @@ export class AppComponent {
     this.authService.logout();
   }
 
-  /**
-   * Dismiss the current global alert
-   */
-  dismissAlert(): void {
-    if (this.latestAlert()) {
-      this.socketService.clearAlert(this.latestAlert()!.id);
-    }
-  }
-
-  /**
-   * Clear all alerts
-   */
-  clearAllAlerts(): void {
-    this.socketService.clearAllAlerts();
-  }
+  // WebSocket/SocketService removed. No alert dismiss/clear methods.
 }

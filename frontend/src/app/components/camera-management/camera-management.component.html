@@ -32,8 +32,8 @@
     <div class="modal-content">
       <h3>{{ editingCamera ? 'Edit Camera' : 'Add Camera' }}</h3>
       <form (ngSubmit)="saveCamera()">
-        <label>Name: <input [(ngModel)]="cameraForm.name" name="name" required /></label>
-        <label>Location: <input [(ngModel)]="cameraForm.location" name="location" /></label>
+        <label>Name: <input [(ngModel)]="cameraForm.name" name="name" required /></label><br />
+        <label>Location: <input [(ngModel)]="cameraForm.location" name="location" /></label><br />
         <label>Type:
           <select [(ngModel)]="cameraForm.camera_type" name="camera_type" required>
             <option value="rtsp">RTSP</option>
@@ -41,15 +41,15 @@
             <option value="usb">USB</option>
             <option value="other">Other</option>
           </select>
-        </label>
-        <label>Stream URL: <input type="text" [(ngModel)]="cameraForm.stream_url" name="stream_url" required /></label>
+        </label><br />
+        <label>Stream URL: <input type="text" [(ngModel)]="cameraForm.stream_url" name="stream_url" required /></label><br />
         <label>Status:
           <select [(ngModel)]="cameraForm.is_active" name="is_active">
             <option [ngValue]="true">Active</option>
             <option [ngValue]="false">Inactive</option>
           </select>
-        </label>
-        <label>Notes: <textarea [(ngModel)]="cameraForm.notes" name="notes"></textarea></label>
+        </label><br />
+        <label>Notes: <textarea [(ngModel)]="cameraForm.notes" name="notes"></textarea></label><br />
         <button type="submit">Save</button>
         <button type="button" (click)="closeModal()">Cancel</button>
       </form>
