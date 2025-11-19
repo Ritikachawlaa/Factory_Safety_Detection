@@ -1,3 +1,23 @@
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .models import HelmetDetection, LoiteringDetection
+from .serializers import HelmetDetectionSerializer, LoiteringDetectionSerializer
+
+# API endpoint for helmet violations
+class HelmetViolationsView(APIView):
+    def get(self, request):
+        # Return all helmet detections with violations (violation_count > 0)
+        violations = HelmetDetection.objects.filter(violation_count__gt=0)
+        serializer = HelmetDetectionSerializer(violations, many=True)
+        return Response(serializer.data)
+
+# API endpoint for loitering violations (alerts)
+class LoiteringViolationsView(APIView):
+    def get(self, request):
+        # Return all loitering detections where alert_triggered is True
+        alerts = LoiteringDetection.objects.filter(alert_triggered=True)
+        serializer = LoiteringDetectionSerializer(alerts, many=True)
+        return Response(serializer.data)
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response

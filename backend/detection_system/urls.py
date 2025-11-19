@@ -34,4 +34,8 @@ urlpatterns = [
     path('live/production/reset/', ml_views.production_counter_reset, name='live-production-reset'),
     path('live/attendance/', ml_views.attendance_system_live, name='live-attendance'),
     path('test/ml-services/', ml_views.test_ml_services, name='test-ml-services'),
+
+    # Violations endpoints for dashboard/violations
+    path('violations/helmet/', views.HelmetViolationsView.as_view(), name='helmet-violations'),
+    path('violations/loitering/', views.LoiteringViolationsView.as_view(), name='loitering-violations'),
 ]
