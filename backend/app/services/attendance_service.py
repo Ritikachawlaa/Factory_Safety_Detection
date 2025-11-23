@@ -1,14 +1,3 @@
-import cv2
-import os
-import time
-from datetime import datetime
-import numpy as np
-import pickle
-
-
-# Lazy import - only load DeepFace when actually needed (not at module import time)
-# This prevents TensorFlow/JAX crashes during server startup
-DeepFace = None
 _deepface_loaded = False
 
 def _ensure_deepface():

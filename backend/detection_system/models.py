@@ -1,3 +1,51 @@
+from django.utils import timezone
+from django.db import models
+
+class UnknownAttendance(models.Model):
+    """Model to store unknown/failed attendance attempts (unrecognized faces)"""
+    timestamp = models.DateTimeField(default=timezone.now, db_index=True)
+    snapshot = models.ImageField(upload_to='attendance/unknown/', null=True, blank=True)  # Face snapshot
+    confidence_score = models.FloatField(default=0.0)
+    notes = models.TextField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'unknown_attendance'
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['-timestamp']),
+        ]
+
+    def __str__(self):
+        return f"Unknown - {self.timestamp} (conf: {self.confidence_score})"
+from django.db import models
+
+class SystemConfiguration(models.Model):
+    """Model to store system-wide configuration (key-value pairs)"""
+    key = models.CharField(max_length=100, unique=True)
+    value = models.JSONField(default=dict)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'system_configuration'
+        ordering = ['key']
+
+    def __str__(self):
+        return f"{self.key}: {self.value}"
+
+
+class ModuleConfiguration(models.Model):
+    """Model to enable/disable modules and store per-module settings"""
+    module_name = models.CharField(max_length=50, unique=True)
+    enabled = models.BooleanField(default=True)
+    settings = models.JSONField(default=dict, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'module_configuration'
+        ordering = ['module_name']
+
+    def __str__(self):
+        return f"{self.module_name} (enabled={self.enabled})"
 from django.db import models
 from django.utils import timezone
 
@@ -71,7 +119,7 @@ class Employee(models.Model):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100, blank=True)
     employee_id = models.CharField(max_length=50, unique=True)
-    photo_path = models.CharField(max_length=255)
+    photo = models.ImageField(upload_to='employees/', null=True, blank=True)
     department = models.CharField(max_length=100, blank=True)
     position = models.CharField(max_length=100, blank=True)
     is_active = models.BooleanField(default=True)
@@ -101,6 +149,7 @@ class AttendanceRecord(models.Model):
     date = models.DateField(default=timezone.now, db_index=True)
     check_in_time = models.TimeField(null=True, blank=True)
     confidence_score = models.FloatField(default=0.0)
+    snapshot = models.ImageField(upload_to='attendance/verified/', null=True, blank=True)  # Face snapshot
     status = models.CharField(
         max_length=20,
         choices=[

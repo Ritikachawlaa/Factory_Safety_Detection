@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
+    'channels',
     'detection_system',
 ]
 
@@ -76,6 +77,9 @@ TEMPLATES = [
     },
 ]
 
+
+# Channels/ASGI
+ASGI_APPLICATION = 'factory_safety.asgi.application'
 WSGI_APPLICATION = 'factory_safety.wsgi.application'
 
 

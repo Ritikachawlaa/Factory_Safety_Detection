@@ -32,11 +32,18 @@ class ProductionCounterAdmin(admin.ModelAdmin):
 
 @admin.register(Employee)
 class EmployeeAdmin(admin.ModelAdmin):
-    list_display = ('employee_id', 'full_name', 'department', 'position', 'is_active', 'created_at')
+    list_display = ('employee_id', 'full_name', 'department', 'position', 'is_active', 'created_at', 'photo_tag')
     list_filter = ('is_active', 'department', 'position')
     search_fields = ('first_name', 'last_name', 'employee_id', 'department')
     ordering = ('first_name', 'last_name')
-    readonly_fields = ('created_at', 'updated_at')
+    readonly_fields = ('created_at', 'updated_at', 'photo_tag')
+
+    def photo_tag(self, obj):
+        if obj.photo:
+            return f'<img src="{obj.photo.url}" width="60" height="60" style="object-fit:cover;" />'
+        return "No Photo"
+    photo_tag.allow_tags = True
+    photo_tag.short_description = 'Photo'
 
 
 @admin.register(AttendanceRecord)

@@ -1,1 +1,6 @@
+/* Force dashboard background to dark if Tailwind custom class is missing */
+.min-h-screen {
+	background-color: #181a1b !important;
+}
+
 

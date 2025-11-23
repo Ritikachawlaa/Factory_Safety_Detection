@@ -1,3 +1,76 @@
+from rest_framework.response import Response
+
+# --- API endpoints for /api/violations/loitering/, /api/violations/helmet/, /api/production/today/ ---
+from rest_framework.views import APIView
+from .models import LoiteringDetection, HelmetDetection, ProductionCounter
+from .serializers import LoiteringDetectionSerializer, HelmetDetectionSerializer, ProductionCounterSerializer
+
+class LoiteringViolationsView(APIView):
+    def get(self, request):
+        violations = LoiteringDetection.objects.filter(alert_triggered=True)
+        serializer = LoiteringDetectionSerializer(violations, many=True)
+        return Response(serializer.data)
+
+class HelmetViolationsView(APIView):
+    def get(self, request):
+        violations = HelmetDetection.objects.filter(violation_count__gt=0)
+        serializer = HelmetDetectionSerializer(violations, many=True)
+        return Response(serializer.data)
+
+class ProductionTodayView(APIView):
+    def get(self, request):
+        from django.utils import timezone
+        today = timezone.now().date()
+        records = ProductionCounter.objects.filter(session_date=today)
+        serializer = ProductionCounterSerializer(records, many=True)
+        return Response(serializer.data)
+
+from rest_framework import viewsets, serializers
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAdminUser
+from .models import UnknownAttendance, SystemConfiguration, ModuleConfiguration
+from .serializers import UnknownAttendanceSerializer
+
+class UnknownAttendanceViewSet(viewsets.ModelViewSet):
+    """ViewSet for unknown attendance logs"""
+    queryset = UnknownAttendance.objects.all()
+    serializer_class = UnknownAttendanceSerializer
+
+# Serializers for config models
+class SystemConfigurationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SystemConfiguration
+        fields = ['key', 'value', 'updated_at']
+
+class ModuleConfigurationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ModuleConfiguration
+        fields = ['module_name', 'enabled', 'settings', 'updated_at']
+
+# API: Get/Set system config
+class SystemConfigView(APIView):
+    permission_classes = [IsAdminUser]
+    def get(self, request):
+        configs = SystemConfiguration.objects.all()
+        return Response(SystemConfigurationSerializer(configs, many=True).data)
+    def post(self, request):
+        for item in request.data:
+            obj, _ = SystemConfiguration.objects.update_or_create(key=item['key'], defaults={'value': item['value']})
+        return self.get(request)
+
+# API: Get/Set module config
+class ModuleConfigView(APIView):
+    permission_classes = [IsAdminUser]
+    def get(self, request):
+        modules = ModuleConfiguration.objects.all()
+        return Response(ModuleConfigurationSerializer(modules, many=True).data)
+    def post(self, request):
+        for item in request.data:
+            obj, _ = ModuleConfiguration.objects.update_or_create(module_name=item['module_name'], defaults={
+                'enabled': item.get('enabled', True),
+                'settings': item.get('settings', {})
+            })
+        return self.get(request)
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response

@@ -5,8 +5,26 @@ from ultralytics import YOLO
 
 # --- CONFIGURATION ---
 MODEL_WEIGHTS_PATH = 'models/best_helmet.pt' # Using your helmet model
-LOITERING_TIME_THRESHOLD = 10  # Seconds
-GROUPING_DISTANCE_THRESHOLD = 150 # Pixels
+
+# --- CONFIGURATION ---
+DEFAULT_LOITERING_TIME_THRESHOLD = 10  # Seconds
+DEFAULT_GROUPING_DISTANCE_THRESHOLD = 150 # Pixels
+
+def get_loitering_config():
+    try:
+        from detection_system.models import ModuleConfiguration
+        config = ModuleConfiguration.objects.filter(module_name='loitering').first()
+        if config and config.settings:
+            return {
+                'time_threshold': int(config.settings.get('time_threshold', DEFAULT_LOITERING_TIME_THRESHOLD)),
+                'distance_threshold': int(config.settings.get('distance_threshold', DEFAULT_GROUPING_DISTANCE_THRESHOLD))
+            }
+    except Exception:
+        pass
+    return {
+        'time_threshold': DEFAULT_LOITERING_TIME_THRESHOLD,
+        'distance_threshold': DEFAULT_GROUPING_DISTANCE_THRESHOLD
+    }
 
 # Don't open camera on startup - it will block browser access!
 # The frontend will send frames via API instead.
@@ -22,43 +40,24 @@ except Exception as e:
 
 # --- GLOBAL STATE (Persists in memory) ---
 # Stores {group_key: start_time} where group_key is tuple(sorted(id_i, id_j))
-person_loitering_timer = {}
-# Stores {track_id} for individuals currently in violation
-active_loitering_groups = set()
 
-# --- HELPER FUNCTIONS ---
 
-def get_person_center(box_coords):
-    """Calculates the center point (x, y) of a bounding box."""
-    x1, y1, x2, y2 = box_coords
-    center_x = (x1 + x2) // 2
-    center_y = (y1 + y2) // 2
-    return (center_x, center_y)
-
-def calculate_distance(p1, p2):
-    """Calculates the Euclidean distance between two center points."""
-    return math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
-
-# --- API-Callable Function ---
-
-def get_loitering_status(frame=None):
+def get_loitering_status(frame):
     """
     This function is called by the API on each request.
     It processes one frame and detects groups of people standing close together.
-    
-    NOTE: Simplified version without tracking (scipy dependency removed).
-    Uses simple proximity detection instead of persistent tracking.
-    
-    Args:
-        frame: numpy array representing the image frame (from frontend webcam)
+    Uses dynamic config for thresholds.
     """
-    global person_loitering_timer, active_loitering_groups
-
     if model is None:
         return {"error": "Backend not initialized. Check model path."}
-    
     if frame is None:
         return {"error": "No frame provided."}
+
+    # Get config
+    config = get_loitering_config()
+    time_threshold = config['time_threshold']
+    distance_threshold = config['distance_threshold']
+
 
     # 1. RUN DETECTION with optimized parameters
     results = model.predict(
@@ -70,13 +69,11 @@ def get_loitering_status(frame=None):
         half=False,  # Set to True if using GPU
         max_det=30   # Limit detections for performance
     )
-    
+
     # 2. EXTRACT PERSON DATA
     person_data = [] # Stores: [(center_point, box_coords)]
-    
     if results and results[0].boxes:
         boxes = results[0].boxes.xyxy.cpu().numpy()
-        
         for box in boxes:
             box_coords = [int(x) for x in box]
             center_point = get_person_center(box_coords)
@@ -84,7 +81,6 @@ def get_loitering_status(frame=None):
 
     # 3. CHECK FOR GROUPS (people standing close together)
     active_groups = 0
-    
     # Check all pairs for proximity
     if len(person_data) >= 2:
         checked_pairs = set()
@@ -94,8 +90,7 @@ def get_loitering_status(frame=None):
                     center_i = person_data[i][0]
                     center_j = person_data[j][0]
                     distance = calculate_distance(center_i, center_j)
-                    
-                    if distance < GROUPING_DISTANCE_THRESHOLD:
+                    if distance < distance_threshold:
                         active_groups += 1
                         checked_pairs.add((i, j))
                         break  # Count this as one group
@@ -103,5 +98,6 @@ def get_loitering_status(frame=None):
     # 4. RETURN STATUS
     return {
         "activeGroups": active_groups,
-        "totalPeople": len(person_data)
+        "totalPeople": len(person_data),
+        "config": config
     }

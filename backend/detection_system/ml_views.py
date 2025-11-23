@@ -36,30 +36,30 @@ from .serializers import (
 # Import ML services
 try:
     from app.services.helmet_service import get_helmet_detection_status
-    print("✅ Helmet service imported successfully")
+    print("[OK] Helmet service imported successfully")
 except ImportError as e:
-    print(f"❌ Helmet service import failed: {e}")
+    print(f"[ERROR] Helmet service import failed: {e}")
     get_helmet_detection_status = None
 
 try:
     from app.services.loitering_service import get_loitering_status
-    print("✅ Loitering service imported successfully")
+    print("[OK] Loitering service imported successfully")
 except ImportError as e:
-    print(f"❌ Loitering service import failed: {e}")
+    print(f"[ERROR] Loitering service import failed: {e}")
     get_loitering_status = None
 
 try:
     from app.services.production_counter_service import get_production_count
-    print("✅ Production counter service imported successfully")
+    print("[OK] Production counter service imported successfully")
 except ImportError as e:
-    print(f"❌ Production counter service import failed: {e}")
+    print(f"[ERROR] Production counter service import failed: {e}")
     get_production_count = None
 
 try:
     from app.services.attendance_service import get_attendance_status
-    print("✅ Attendance service imported successfully")
+    print("[OK] Attendance service imported successfully")
 except Exception as e:
-    print(f"❌ Attendance service import failed: {type(e).__name__}: {e}")
+    print(f"[ERROR] Attendance service import failed: {type(e).__name__}: {e}")
     get_attendance_status = None
 
 
@@ -68,7 +68,10 @@ def run_ml_inference(func, frame):
     Wrapper to run ML inference in thread pool (non-blocking).
     This allows multiple detections to run concurrently.
     """
-    return ml_executor.submit(func, frame).result()
+    result = ml_executor.submit(func, frame).result()
+    if result is None:
+        return {"error": "ML inference returned no result."}
+    return result
 
 @api_view(['POST'])
 def helmet_detection_live(request):

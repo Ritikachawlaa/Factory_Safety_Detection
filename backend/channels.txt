@@ -1,0 +1,2 @@
+# Add Django Channels for WebSocket support
+channels>=4.0.0

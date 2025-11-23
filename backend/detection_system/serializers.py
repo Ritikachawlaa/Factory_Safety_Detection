@@ -1,8 +1,15 @@
+
 from rest_framework import serializers
 from .models import (
     HelmetDetection, LoiteringDetection, ProductionCounter,
-    Employee, AttendanceRecord, SystemLog, DailyReport
+    Employee, AttendanceRecord, SystemLog, DailyReport, UnknownAttendance
 )
+
+class UnknownAttendanceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UnknownAttendance
+        fields = '__all__'
+        read_only_fields = ('id', 'timestamp')
 
 
 class HelmetDetectionSerializer(serializers.ModelSerializer):
