@@ -1,4 +1,15 @@
 _deepface_loaded = False
+import cv2
+import os
+import time
+from datetime import datetime
+import numpy as np
+import pickle
+from django.core.files.base import ContentFile
+from detection_system.models import AttendanceRecord, Employee, UnknownAttendance
+from django.utils import timezone
+
+_deepface_loaded = False
 
 def _ensure_deepface():
     """Lazy load DeepFace only when first attendance check is made."""
@@ -8,10 +19,10 @@ def _ensure_deepface():
         try:
             from deepface import DeepFace as DF
             DeepFace = DF
-            print("✅ DeepFace library loaded successfully")
+            print("[OK] DeepFace library loaded successfully")
             return True
         except Exception as e:
-            print(f"❌ DeepFace library not available: {type(e).__name__}: {str(e)[:100]}")
+            print(f"[ERROR] DeepFace library not available: {type(e).__name__}: {str(e)[:100]}")
             print("Attendance service will not be available.")
             DeepFace = None
             return False
@@ -47,7 +58,7 @@ def cosine_distance(a, b):
 # The frontend will send frames via API instead.
 
 # --- GLOBAL OBJECTS (Loaded ONCE when the server starts) ---
-print("Initializing Attendance System...")
+print("[INFO] Initializing Attendance System...")
 
 # Store pre-computed embeddings: {employee_name: embedding_vector}
 employee_embeddings = {}
@@ -80,13 +91,13 @@ if True:  # Changed from if DeepFace: - initialization happens on first use inst
             try:
                 with open(EMBEDDINGS_CACHE_FILE, 'rb') as f:
                     employee_embeddings = pickle.load(f)
-                print(f"✅ Loaded {len(employee_embeddings)} cached embeddings")
+                print(f"[OK] Loaded {len(employee_embeddings)} cached embeddings")
                 return True
             except Exception as e:
-                print(f"⚠️ Cache load failed: {e}. Regenerating...")
+                print(f"[WARNING] Cache load failed: {e}. Regenerating...")
         
         # Compute embeddings for all employees
-        print("⏳ Pre-computing face embeddings (one-time operation)...")
+        print("[INFO] Pre-computing face embeddings (one-time operation)...")
         employee_embeddings = {}
         image_files = [f for f in os.listdir(DB_PATH) if f.endswith(('.jpg', '.png'))]
         
@@ -102,23 +113,23 @@ if True:  # Changed from if DeepFace: - initialization happens on first use inst
                 if embedding_objs:
                     employee_name = os.path.splitext(img_file)[0]
                     employee_embeddings[employee_name] = np.array(embedding_objs[0]["embedding"])
-                    print(f"  ✓ {employee_name}")
+                    print(f"  [OK] {employee_name}")
             except Exception as e:
-                print(f"  ✗ Failed to process {img_file}: {e}")
+                print(f"  [ERROR] Failed to process {img_file}: {e}")
         
         # Cache the embeddings for next startup
         try:
             os.makedirs(os.path.dirname(EMBEDDINGS_CACHE_FILE), exist_ok=True)
             with open(EMBEDDINGS_CACHE_FILE, 'wb') as f:
                 pickle.dump(employee_embeddings, f)
-            print(f"💾 Cached {len(employee_embeddings)} embeddings")
+            print(f"[OK] Cached {len(employee_embeddings)} embeddings")
         except Exception as e:
-            print(f"⚠️ Failed to cache embeddings: {e}")
+            print(f"[WARNING] Failed to cache embeddings: {e}")
         
         return len(employee_embeddings) > 0
 
     # Skip initialization at module load - will initialize on first use
-    print("⏳ Attendance service will initialize on first use (lazy loading)")
+    print("[INFO] Attendance service will initialize on first use (lazy loading)")
 
 # --- GLOBAL STATE (Persists in memory) ---
 last_check_time = 0
@@ -149,7 +160,7 @@ def get_attendance_status(frame=None):
             return {"error": "Employee database not found or invalid."}
         if not load_or_create_embeddings():
             return {"error": "Failed to load employee embeddings."}
-        print(f"✅ Attendance service initialized with {len(employee_embeddings)} employees")
+        print(f"[OK] Attendance service initialized with {len(employee_embeddings)} employees")
 
     if frame is None:
         return {"error": "No frame provided."}
@@ -189,7 +200,7 @@ def get_attendance_status(frame=None):
                 if min_distance < CONFIDENCE_THRESHOLD and best_match_name:
                     if best_match_name not in logged_today:
                         name_capitalized = best_match_name.capitalize()
-                        print(f"✅ ATTENDANCE LOGGED: {name_capitalized} (confidence: {1-min_distance:.2%})")
+                        print(f"[OK] ATTENDANCE LOGGED: {name_capitalized} (confidence: {1-min_distance:.2%})")
                         
                         # Update global state
                         logged_today.add(best_match_name)
@@ -203,7 +214,52 @@ def get_attendance_status(frame=None):
                         # Keep log from getting too big
                         if len(attendance_log) > 20:
                             attendance_log.pop()
+                        
+                        # Save snapshot to database
+                        try:
+                            emp = Employee.objects.filter(first_name__iexact=best_match_name).first()
+                            if emp:
+                                # Encode frame to JPEG
+                                success, buffer = cv2.imencode('.jpg', frame)
+                                if success:
+                                    image_file = ContentFile(buffer.tobytes())
+                                    filename = f"{best_match_name}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+                                    
+                                    # Save or update attendance record with snapshot
+                                    attendance_record, created = AttendanceRecord.objects.update_or_create(
+                                        employee=emp,
+                                        date=timezone.now().date(),
+                                        defaults={
+                                            'timestamp': timezone.now(),
+                                            'check_in_time': timezone.now().time(),
+                                            'confidence_score': float(1-min_distance),
+                                            'status': 'present',
+                                        }
+                                    )
+                                    attendance_record.snapshot.save(filename, image_file, save=True)
+                                    print(f"[OK] Snapshot saved for {name_capitalized}")
+                        except Exception as e:
+                            print(f"[ERROR] Failed to save snapshot: {e}")
+                else:
+                    # Unknown face detected - save snapshot
+                    try:
+                        # Only save unknown snapshot if we haven't saved one very recently (to avoid spam)
+                        # For now, just save it
+                        success, buffer = cv2.imencode('.jpg', frame)
+                        if success:
+                            image_file = ContentFile(buffer.tobytes())
+                            filename = f"unknown_{timezone.now().strftime('%Y%m%d_%H%M%S')}.jpg"
                             
+                            unknown = UnknownAttendance.objects.create(
+                                timestamp=timezone.now(),
+                                confidence_score=0.0,
+                                notes="Unrecognized face detected."
+                            )
+                            unknown.snapshot.save(filename, image_file, save=True)
+                            print(f"[INFO] Unknown face snapshot saved")
+                    except Exception as e:
+                        print(f"[ERROR] Failed to save unknown snapshot: {e}")
+
         except Exception as e:
             # This often happens if no faces are in the frame
             pass 

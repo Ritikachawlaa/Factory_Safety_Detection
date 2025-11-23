@@ -90,11 +90,21 @@
       
       <div class="max-h-[500px] overflow-y-auto space-y-2">
         @for (log of verifiedLogs(); track log.id) {
-          <div class="flex items-center gap-3 bg-gray-900 p-4 rounded-lg border border-gray-700 hover:border-green-500 transition">
-            <span class="text-2xl">✓</span>
+          <div class="flex items-center gap-4 bg-gray-900 p-4 rounded-lg border border-gray-700 hover:border-green-500 transition">
+            <!-- Face Snapshot Thumbnail -->
+            @if (log.photoUrl) {
+              <div class="flex-shrink-0">
+                <img [src]="log.photoUrl" alt="{{ log.employeeName }}" 
+                     class="w-16 h-16 rounded-lg object-cover border-2 border-green-500">
+              </div>
+            } @else {
+              <span class="text-3xl">✅</span>
+            }
+
             <div class="flex-1">
               <div class="text-white font-semibold">{{ log.employeeName }}</div>
-              <div class="text-sm text-gray-400">{{ formatTime(log.timestamp) }} • {{ log.confidence }}% confidence</div>
+              <div class="text-sm text-gray-400">{{ formatTime(log.timestamp) }}</div>
+              <div class="text-xs text-green-400 mt-1">Verified Employee</div>
             </div>
           </div>
         }

@@ -20,24 +20,24 @@ export class AttendanceSystemComponent implements OnInit, OnDestroy {
   // Signals for two-column logs
   attendanceRecords = this.violationService.attendanceRecords;
   unknownPersons = this.violationService.unknownPersons;
-  
+
   showVerifyModal = signal(false);
   selectedUnknownRecord = signal<AttendanceRecord | null>(null);
   selectedEmployeeId = signal<string>('');
 
   // Computed signals for filtered logs
-  verifiedLogs = computed(() => 
+  verifiedLogs = computed(() =>
     this.attendanceRecords().filter(record => record.status === 'verified')
   );
-  
-  unknownLogs = computed(() => 
+
+  unknownLogs = computed(() =>
     this.attendanceRecords().filter(record => record.status === 'unknown')
   );
 
-  attendanceData: AttendanceStatus = { 
-    verifiedCount: 0, 
-    lastPersonSeen: '---', 
-    attendanceLog: [] 
+  attendanceData: AttendanceStatus = {
+    verifiedCount: 0,
+    lastPersonSeen: '---',
+    attendanceLog: []
   };
   lastDetection: any = null;
   isWebcamActive = false;
@@ -45,12 +45,12 @@ export class AttendanceSystemComponent implements OnInit, OnDestroy {
   private subscription?: Subscription;
   private stream?: MediaStream;
 
-  constructor(private attendanceService: AttendanceService) {}
+  constructor(private attendanceService: AttendanceService) { }
 
   ngOnInit(): void {
     // Load attendance records from violation service
     this.violationService.loadAttendanceRecords();
-    
+
     this.subscription = this.attendanceService.getAttendanceStats().subscribe(
       (data: any) => {
         this.attendanceData = data;
@@ -75,13 +75,13 @@ export class AttendanceSystemComponent implements OnInit, OnDestroy {
       if (this.stream) {
         this.stream.getTracks().forEach(track => track.stop());
       }
-      
-      this.stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
+
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        video: {
           width: { ideal: 640 },
           height: { ideal: 480 },
           facingMode: 'user'
-        } 
+        }
       });
       this.videoElement.nativeElement.srcObject = this.stream;
       this.isWebcamActive = true;
@@ -130,26 +130,48 @@ export class AttendanceSystemComponent implements OnInit, OnDestroy {
           status: result.status || 'Not recognized',
           timestamp: result.timestamp || new Date()
         };
-        
+
         if (result.recognized_person) {
           this.attendanceData.lastPersonSeen = result.recognized_person;
           this.attendanceData.verifiedCount = result.verified_count || this.attendanceData.verifiedCount + 1;
-          
-          // Add to attendance log
-          const logEntry = `${result.recognized_person} - ${new Date().toLocaleTimeString()}`;
-          if (!this.attendanceData.attendanceLog) {
-            this.attendanceData.attendanceLog = [];
-          }
-          this.attendanceData.attendanceLog.unshift(logEntry);
         }
-        
+
+        // Update logs with snapshots if available
+        if (result.verified_log_details) {
+          const newVerified = result.verified_log_details.map((log: any, index: number) => ({
+            id: `live-v-${index}-${Date.now()}`,
+            employeeId: 'EMP-00' + index,
+            employeeName: log.name,
+            timestamp: log.time, // Already formatted time string
+            type: 'check-in',
+            photoUrl: log.snapshot_url,
+            confidence: 0.95,
+            status: 'verified'
+          }));
+
+          const newUnknown = result.unknown_log_details ? result.unknown_log_details.map((log: any, index: number) => ({
+            id: `live-u-${index}-${Date.now()}`,
+            employeeId: 'unknown',
+            employeeName: 'Unknown',
+            timestamp: log.time,
+            type: 'check-in',
+            photoUrl: log.snapshot_url,
+            confidence: 0.0,
+            status: 'unknown'
+          })) : [];
+
+          // Update the violation service signals to reflect live data
+          this.violationService.attendanceRecords.set([...newVerified, ...newUnknown]);
+        }
+
         this.isRecognizing = false;
-        alert(`Face Recognition Complete!\nPerson: ${this.lastDetection.lastPersonSeen}\nStatus: ${this.lastDetection.status}`);
+        // Removed alert to make it smoother
+        // alert(`Face Recognition Complete!\nPerson: ${this.lastDetection.lastPersonSeen}\nStatus: ${this.lastDetection.status}`);
       },
       error: (error: any) => {
         console.error('Recognition error:', error);
         this.isRecognizing = false;
-        alert('Face recognition failed. Check console for details.');
+        // alert('Face recognition failed. Check console for details.');
       }
     });
   }
@@ -167,11 +189,21 @@ export class AttendanceSystemComponent implements OnInit, OnDestroy {
    * Format timestamp for display (e.g., "07:02 AM")
    */
   formatTime(timestamp: string): string {
-    return new Date(timestamp).toLocaleTimeString('en-IN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    });
+    // If it's already a time string like "09:30 AM", return it
+    if (timestamp.includes('AM') || timestamp.includes('PM')) {
+      return timestamp;
+    }
+
+    // Otherwise parse as date
+    try {
+      return new Date(timestamp).toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    } catch (e) {
+      return timestamp;
+    }
   }
 
   /**
@@ -198,12 +230,12 @@ export class AttendanceSystemComponent implements OnInit, OnDestroy {
   verifyUnknownPerson(): void {
     const record = this.selectedUnknownRecord();
     const employeeId = this.selectedEmployeeId();
-    
+
     if (!record || !employeeId) {
       alert('Please select an employee');
       return;
     }
-    
+
     this.violationService.verifyUnknownPerson(record.id, employeeId).subscribe({
       next: () => {
         alert('✅ Person verified and linked to employee database!');

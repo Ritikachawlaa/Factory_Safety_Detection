@@ -8,6 +8,8 @@ export interface AttendanceStatus {
   verifiedCount: number;
   lastPersonSeen: string;
   attendanceLog?: any[];
+  verified_log_details?: any[];
+  unknown_log_details?: any[];
 }
 
 @Injectable({
@@ -17,7 +19,7 @@ export class AttendanceService {
   private apiUrl = `${environment.apiUrl}/live/attendance/`;
   private statsUrl = `${environment.apiUrl}/stats/attendance/`;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   // Send webcam frame for live detection
   detectFromFrame(frameData: string): Observable<AttendanceStatus> {

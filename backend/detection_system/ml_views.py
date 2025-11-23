@@ -300,6 +300,29 @@ def attendance_system_live(request):
         # Run ML detection in thread pool (non-blocking)
         result = run_ml_inference(get_attendance_status, frame)
         
+        # Fetch recent verified attendance with snapshots
+        from detection_system.models import AttendanceRecord, UnknownAttendance
+        
+        verified_today = AttendanceRecord.objects.filter(
+            date=timezone.now().date()
+        ).select_related('employee').order_by('-timestamp')[:20]
+
+        verified_log_details = [{
+            'name': record.employee.full_name,
+            'time': record.check_in_time.strftime('%I:%M:%S %p') if record.check_in_time else record.timestamp.strftime('%I:%M:%S %p'),
+            'snapshot_url': request.build_absolute_uri(record.snapshot.url) if record.snapshot else None
+        } for record in verified_today]
+
+        # Fetch unknown faces
+        unknown_today = UnknownAttendance.objects.filter(
+            timestamp__date=timezone.now().date()
+        ).order_by('-timestamp')[:10]
+
+        unknown_log_details = [{
+            'time': record.timestamp.strftime('%I:%M:%S %p'),
+            'snapshot_url': request.build_absolute_uri(record.snapshot.url) if record.snapshot else None
+        } for record in unknown_today]
+        
         # Format response to match frontend expectations
         last_person = result.get('lastPersonSeen', '---')
         is_recognized = last_person != '---'
@@ -309,13 +332,15 @@ def attendance_system_live(request):
             'status': 'Recognized' if is_recognized else 'Not recognized',
             'timestamp': datetime.now().isoformat(),
             'verified_count': result.get('verifiedCount', 0),
-            'attendance_log': result.get('attendanceLog', [])
+            'attendance_log': result.get('attendanceLog', []),
+            'verified_log_details': verified_log_details,
+            'unknown_log_details': unknown_log_details
         })
         
     except Exception as e:
         import traceback
         error_details = traceback.format_exc()
-        print(f"❌ Attendance system error: {e}")
+        print(f"[ERROR] Attendance system error: {e}")
         print(error_details)
         SystemLog.objects.create(
             log_type='attendance',
