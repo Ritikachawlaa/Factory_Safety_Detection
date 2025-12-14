@@ -1,0 +1,101 @@
+<div class="module-container">
+  <div class="module-header">
+    <div class="header-left">
+      <span class="module-icon">👁️</span>
+      <div>
+        <h1 class="module-title">Face Recognition</h1>
+        <p class="module-subtitle">Identity verification system</p>
+      </div>
+    </div>
+    <div class="status-badge" [class.active]="isDetecting">
+      <span class="badge-dot"></span>{{ isDetecting ? 'Detecting' : 'Standby' }}
+    </div>
+  </div>
+
+  <!-- Control Buttons -->
+  <div class="control-section">
+    <button 
+      class="control-btn primary" 
+      (click)="startCamera()"
+      [disabled]="cameraActive"
+    >
+      <span>📹</span> Start Camera
+    </button>
+    <button 
+      class="control-btn danger" 
+      (click)="stopCamera()"
+      [disabled]="!cameraActive"
+    >
+      <span>⏹️</span> Stop Camera
+    </button>
+    <button 
+      class="control-btn success" 
+      (click)="startDetection()"
+      [disabled]="isDetecting || !cameraActive"
+    >
+      <span>🎯</span> Start Detecting
+    </button>
+    <button 
+      class="control-btn warning" 
+      (click)="stopDetection()"
+      [disabled]="!isDetecting"
+    >
+      <span>⏸️</span> Stop Detecting
+    </button>
+    <button 
+      class="control-btn info" 
+      (click)="registerEmployee()"
+      [disabled]="!cameraActive"
+    >
+      <span>➕</span> Add Employee
+    </button>
+  </div>
+
+  <!-- Registration Status Message -->
+  <div *ngIf="registrationStatus !== 'idle'" class="registration-status" [class]="registrationStatus">
+    {{ registrationMessage }}
+  </div>
+
+  <div class="content-grid">
+    <div class="video-section">
+      <div class="video-container">
+        <video #videoElement autoplay playsinline class="video-feed"></video>
+        <div class="live-indicator" *ngIf="cameraActive"><span class="live-dot"></span>LIVE</div>
+      </div>
+    </div>
+    <div class="stats-panel">
+      <div class="stat-card primary">
+        <div class="stat-icon">✅</div>
+        <div class="stat-content">
+          <p class="stat-label">Recognized</p>
+          <p class="stat-value">{{ (detectionResult?.faces_recognized || []).length }}</p>
+        </div>
+      </div>
+      <div class="stat-card secondary">
+        <div class="stat-icon">❓</div>
+        <div class="stat-content">
+          <p class="stat-label">Unknown</p>
+          <p class="stat-value">{{ detectionResult?.unknown_faces || 0 }}</p>
+        </div>
+      </div>
+      <div class="stat-card tertiary">
+        <div class="stat-icon">📊</div>
+        <div class="stat-content">
+          <p class="stat-label">Total Faces</p>
+          <p class="stat-value">{{ (detectionResult?.faces_recognized || []).length + (detectionResult?.unknown_faces || 0) }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="history-section">
+    <h2 class="history-title">Recent Activity</h2>
+    <div class="history-list">
+      <div *ngFor="let entry of recentHistory" class="history-item">
+        <div class="history-time">{{ formatTime(entry.timestamp) }}</div>
+        <div class="history-label">{{ entry.label }}</div>
+        <div class="history-value">{{ entry.value }}</div>
+      </div>
+      <div *ngIf="recentHistory.length === 0" class="history-empty"><p>No activity recorded yet</p></div>
+    </div>
+  </div>
+</div>

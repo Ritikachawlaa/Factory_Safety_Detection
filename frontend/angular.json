@@ -63,12 +63,16 @@
               "buildTarget": "factory-safety-frontend:build:production"
             },
             "development": {
-              "buildTarget": "factory-safety-frontend:build:development"
+              "buildTarget": "factory-safety-frontend:build:development",
+              "port": 4000
             }
           },
           "defaultConfiguration": "development"
         }
       }
     }
+  },
+  "cli": {
+    "analytics": false
   }
 }

@@ -1,13 +1,14 @@
-_deepface_loaded = False
 import cv2
 import os
 import time
 from datetime import datetime
 import numpy as np
 import pickle
-from django.core.files.base import ContentFile
-from detection_system.models import AttendanceRecord, Employee, UnknownAttendance
-from django.utils import timezone
+from pathlib import Path
+
+# Configuration
+BASE_DIR = Path(__file__).parent.parent.parent
+DATABASE_PATH = str(BASE_DIR / 'database' / 'employees')
 
 _deepface_loaded = False
 
@@ -35,7 +36,7 @@ RECOGNITION_MODEL = "Facenet"  # 3x faster than VGG-Face
 DETECTOR_BACKEND = "opencv"  # Using opencv instead of retinaface (more compatible)
 RECOGNITION_INTERVAL = 0.5  # Check every 0.5 seconds (walk-by capable)
 EMBEDDINGS_CACHE_FILE = 'database/employee_embeddings.pkl'
-CONFIDENCE_THRESHOLD = 0.6  # Lower = more strict matching
+CONFIDENCE_THRESHOLD = 0.4  # Lower = more strict matching (0.4 is more lenient for better recognition)
 
 def cosine_distance(a, b):
     """

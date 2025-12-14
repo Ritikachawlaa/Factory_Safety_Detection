@@ -1,9 +1,12 @@
 import cv2
 from ultralytics import YOLO
+from pathlib import Path
+import os
 
 # --- CONFIGURATION ---
-# IMPORTANT: This path is now relative to where you run the server (the root folder).
-MODEL_WEIGHTS_PATH = 'models/best_helmet.pt' 
+# Get absolute path to models directory
+BASE_DIR = Path(__file__).parent.parent.parent
+MODEL_WEIGHTS_PATH = str(BASE_DIR / 'models' / 'best_helmet.pt') 
 
 # Define the minimum confidence score required for a detection.
 CONFIDENCE_THRESHOLD = 0.5 

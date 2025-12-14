@@ -2,25 +2,19 @@ import cv2
 import math
 import time
 from ultralytics import YOLO
+from pathlib import Path
 
 # --- CONFIGURATION ---
-MODEL_WEIGHTS_PATH = 'models/best_helmet.pt' # Using your helmet model
+BASE_DIR = Path(__file__).parent.parent.parent
+MODEL_WEIGHTS_PATH = str(BASE_DIR / 'models' / 'best_helmet.pt')  # Using your helmet model
 
 # --- CONFIGURATION ---
 DEFAULT_LOITERING_TIME_THRESHOLD = 10  # Seconds
 DEFAULT_GROUPING_DISTANCE_THRESHOLD = 150 # Pixels
 
 def get_loitering_config():
-    try:
-        from detection_system.models import ModuleConfiguration
-        config = ModuleConfiguration.objects.filter(module_name='loitering').first()
-        if config and config.settings:
-            return {
-                'time_threshold': int(config.settings.get('time_threshold', DEFAULT_LOITERING_TIME_THRESHOLD)),
-                'distance_threshold': int(config.settings.get('distance_threshold', DEFAULT_GROUPING_DISTANCE_THRESHOLD))
-            }
-    except Exception:
-        pass
+    """Get loitering configuration from config file or use defaults"""
+    # TODO: Load from JSON config file in the future
     return {
         'time_threshold': DEFAULT_LOITERING_TIME_THRESHOLD,
         'distance_threshold': DEFAULT_GROUPING_DISTANCE_THRESHOLD

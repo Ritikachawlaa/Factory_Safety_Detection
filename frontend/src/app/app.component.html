@@ -1,141 +1,15 @@
-<div class="app-container bg-factory-dark min-h-screen" *ngIf="showSidebar; else loginView">
+<!-- New Dashboard Layout with Sidebar -->
+<div class="app-layout" *ngIf="isDashboardRoute(); else legacyLayout">
+  <!-- Sidebar -->
+  <app-sidebar></app-sidebar>
   
-  <!-- ============================================================================
-       MASTER ALERT HEADER (Global - Above Everything)
-       ============================================================================ -->
-  <div class="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
-       [ngClass]="{
-         'bg-red-600 animate-pulse': hasViolations(),
-         'bg-gray-900': !hasViolations()
-       }">
-    <div class="container mx-auto px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center gap-4">
-        @if (hasViolations()) {
-          <span class="text-3xl">🚨</span>
-          <div>
-            <h2 class="text-white font-bold text-lg">CRITICAL ALERT</h2>
-            <p class="text-white text-sm">{{ latestAlert()?.message || 'System Violation Detected' }}</p>
-          </div>
-        } @else {
-          <span class="text-2xl">✅</span>
-          <h2 class="text-green-400 font-semibold">All Systems Normal</h2>
-        }
-      </div>
-      
-      <div class="flex items-center gap-3">
-        @if (alertCount() > 0) {
-          <span class="px-3 py-1 bg-white text-red-600 rounded-full font-bold">
-            {{ alertCount() }} Alert{{ alertCount() > 1 ? 's' : '' }}
-          </span>
-          <button 
-            (click)="clearAllAlerts()"
-            class="px-4 py-2 bg-white text-red-600 rounded-lg font-semibold hover:bg-gray-100 transition">
-            Dismiss All
-          </button>
-        }
-      </div>
-    </div>
-  </div>
-
-  <!-- Spacer for fixed header -->
-  <div class="h-16"></div>
-
-  <div class="flex min-h-screen bg-factory-dark">
-    <!-- ============================================================================
-         SIDEBAR (Mission Control Style)
-         ============================================================================ -->
-    <aside class="fixed left-0 top-16 bottom-0 bg-gray-900 border-r border-gray-800 transition-all duration-300 z-40"
-           [ngClass]="isSidebarCollapsed ? 'w-20' : 'w-64'">
-      
-      <!-- Sidebar Header -->
-      <div class="p-4 border-b border-gray-800">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3" *ngIf="!isSidebarCollapsed">
-            <span class="text-3xl">🏭</span>
-            <div>
-              <h1 class="text-white font-bold text-lg">Factory Safety</h1>
-              <p class="text-gray-400 text-xs">Mission Control</p>
-            </div>
-          </div>
-          <button 
-            (click)="toggleSidebar()"
-            class="p-2 hover:bg-gray-800 rounded-lg transition text-gray-400 hover:text-white">
-            <span *ngIf="!isSidebarCollapsed">◀</span>
-            <span *ngIf="isSidebarCollapsed">▶</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Navigation -->
-      <nav class="p-3 flex flex-col space-y-2">
-        <a routerLink="/dashboard" 
-           routerLinkActive="bg-factory-accent text-black"
-           class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 transition group w-full">
-          <span class="text-xl">📊</span>
-          <span *ngIf="!isSidebarCollapsed" class="font-medium group-hover:text-white">Dashboard</span>
-        </a>
-        
-        <a routerLink="/helmet-detection" 
-           routerLinkActive="bg-factory-accent text-black"
-           class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 transition group w-full">
-          <span class="text-xl">🪖</span>
-          <span *ngIf="!isSidebarCollapsed" class="font-medium group-hover:text-white">Helmet Safety</span>
-        </a>
-        
-        <a routerLink="/loitering-detection" 
-           routerLinkActive="bg-factory-accent text-black"
-           class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 transition group w-full">
-          <span class="text-xl">👥</span>
-          <span *ngIf="!isSidebarCollapsed" class="font-medium group-hover:text-white">Loitering Monitor</span>
-        </a>
-        
-        <a routerLink="/production-counter" 
-           routerLinkActive="bg-factory-accent text-black"
-           class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 transition group w-full">
-          <span class="text-xl">📦</span>
-          <span *ngIf="!isSidebarCollapsed" class="font-medium group-hover:text-white">Production Counter</span>
-        </a>
-        
-        <a routerLink="/attendance-system" 
-           routerLinkActive="bg-factory-accent text-black"
-           class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 transition group w-full">
-          <span class="text-xl">✓</span>
-          <span *ngIf="!isSidebarCollapsed" class="font-medium group-hover:text-white">Attendance System</span>
-        </a>
-      </nav>
-
-      <!-- User Info & Logout -->
-      <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-800 bg-gray-900">
-        <div class="flex items-center justify-between" *ngIf="!isSidebarCollapsed">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-factory-accent rounded-full flex items-center justify-center text-black font-bold">
-              {{ authService.getUsername()?.charAt(0)?.toUpperCase() }}
-            </div>
-            <div>
-              <p class="text-white font-medium text-sm">{{ authService.getUsername() }}</p>
-              <p class="text-gray-400 text-xs">Administrator</p>
-            </div>
-          </div>
-        </div>
-        <button 
-          (click)="logout()"
-          class="w-full mt-3 flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
-          <span>🚪</span>
-          <span *ngIf="!isSidebarCollapsed">Logout</span>
-        </button>
-      </div>
-    </aside>
-
-    <!-- ============================================================================
-         MAIN CONTENT AREA
-         ============================================================================ -->
-    <main class="flex-1 transition-all duration-300 bg-factory-dark"
-          [ngClass]="isSidebarCollapsed ? 'ml-20' : 'ml-64'">
-      <router-outlet></router-outlet>
-    </main>
+  <!-- Main Content Area -->
+  <div class="main-content">
+    <router-outlet></router-outlet>
   </div>
 </div>
 
-<ng-template #loginView>
+<!-- Legacy Layout (for old routes) -->
+<ng-template #legacyLayout>
   <router-outlet></router-outlet>
 </ng-template>

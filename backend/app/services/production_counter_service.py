@@ -2,9 +2,11 @@ import cv2
 import os
 from ultralytics import YOLO
 import numpy as np
+from pathlib import Path
 
 # --- CONFIGURATION ---
-MODEL_WEIGHTS_PATH = 'models/best_product.pt'
+BASE_DIR = Path(__file__).parent.parent.parent
+MODEL_WEIGHTS_PATH = str(BASE_DIR / 'models' / 'best_product.pt')
 TRACKER_CONFIG = 'bytetrack.yaml'  # Use ByteTrack for object tracking
 LINE_Y_POSITION = 0.5  # Line position (50% of frame height)
 CONFIDENCE_THRESHOLD = 0.25

@@ -1,0 +1,36 @@
+<div class="sidebar">
+  <!-- Sidebar Header -->
+  <div class="sidebar-header">
+    <div class="logo">
+      <span class="logo-icon">🎯</span>
+      <span class="logo-text">AI Analytics</span>
+    </div>
+  </div>
+
+  <!-- Navigation Modules -->
+  <nav class="sidebar-nav">
+    <div class="nav-section">
+      <h3 class="section-title">Detection Modules</h3>
+      
+      <a 
+        *ngFor="let module of modules" 
+        [routerLink]="module.route"
+        [class.active]="isActive(module.route)"
+        class="nav-item"
+        [attr.data-color]="module.color"
+      >
+        <span class="nav-icon">{{ module.icon }}</span>
+        <span class="nav-label">{{ module.label }}</span>
+        <span class="nav-indicator" *ngIf="isActive(module.route)"></span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Sidebar Footer -->
+  <div class="sidebar-footer">
+    <div class="footer-content">
+      <span class="status-dot"></span>
+      <span class="status-text">System Active</span>
+    </div>
+  </div>
+</div>

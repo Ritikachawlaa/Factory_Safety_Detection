@@ -7,27 +7,45 @@ A comprehensive real-time factory safety monitoring system using AI/ML for helme
 ```
 factory_safety_detector/
 │
-├── backend/                      # Backend API & ML Models
-│   ├── app/                      # FastAPI application
-│   ├── models/                   # YOLO & ML models
-│   ├── database/                 # Employee photos
-│   ├── config/                   # Configuration files
-│   ├── scripts/                  # Standalone scripts
-│   └── requirements.txt          # Python dependencies
+├── backend/                      # FastAPI Backend (Complete)
+│   ├── app/                      
+│   │   ├── main.py              # FastAPI application & all endpoints
+│   │   └── services/            # ML service modules
+│   ├── data/                    # JSON-based data storage
+│   ├── models/                  # YOLO & ML models
+│   ├── database/                # Employee photos
+│   └── requirements.txt         # Python dependencies (FastAPI only)
 │
 ├── frontend/                     # Angular Frontend
-│   ├── src/                      # Source code
-│   ├── package.json              # Node dependencies
-│   └── angular.json              # Angular config
+│   ├── src/                     # Source code
+│   ├── package.json             # Node dependencies
+│   └── angular.json             # Angular config
 │
-└── *.md                          # Documentation
+└── *.md                         # Documentation
 ```
-### Manual Start
+
+## 🚀 Quick Start
+
+### Option 1: Using Startup Scripts
+
+**Windows:**
+```powershell
+.\start_backend.bat  # Terminal 1
+cd frontend && ng serve  # Terminal 2
+```
+
+**Linux/Mac:**
+```bash
+./start_backend.sh  # Terminal 1
+cd frontend && ng serve  # Terminal 2
+```
+
+### Option 2: Manual Start
 
 **Terminal 1 - Backend:**
 ```powershell
 cd backend
-uvicorn app.main:app --reload --port 8000
+python -m app.main
 ```
 
 **Terminal 2 - Frontend:**
@@ -37,7 +55,10 @@ npm install  # First time only
 ng serve
 ```
 
-**Access:** http://localhost:4200
+**Access:**
+- Frontend: http://localhost:4200
+- API Docs: http://localhost:8000/docs
+- Backend API: http://localhost:8000
 
 ## 📋 Prerequisites
 
