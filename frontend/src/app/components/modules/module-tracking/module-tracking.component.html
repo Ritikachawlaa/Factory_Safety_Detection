@@ -46,8 +46,9 @@
 
   <div class="content-grid">
     <div class="video-section">
-      <div class="video-container">
+      <div class="video-container" style="position: relative;">
         <video #videoElement autoplay playsinline class="video-feed"></video>
+        <canvas #canvasElement style="position: absolute; top: 0; left: 0; pointer-events: none;"></canvas>
         <div class="live-indicator" *ngIf="cameraActive"><span class="live-dot"></span>LIVE</div>
       </div>
     </div>

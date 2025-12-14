@@ -5,7 +5,6 @@ Reuses existing YOLOv8 custom helmet model with tracking
 from ultralytics import YOLO
 from pathlib import Path
 import numpy as np
-from models.tracker import ObjectTracker
 
 class HelmetDetector:
     """Wrapper for helmet detection using existing custom YOLO model"""
@@ -13,7 +12,7 @@ class HelmetDetector:
     def __init__(self):
         self.model = None
         self.confidence_threshold = 0.5
-        self.tracker = ObjectTracker(max_disappeared=30)  # Track people across frames
+        self.tracker_config = "bytetrack.yaml"  # ByteTrack for stable tracking
         
     def load(self):
         """Load the existing helmet model"""
@@ -49,12 +48,21 @@ class HelmetDetector:
             return self._empty_result()
         
         try:
-            results = self.model(frame, conf=self.confidence_threshold, verbose=False)[0]
+            # Use YOLO tracking if enabled, otherwise standard detection
+            if track:
+                results = self.model.track(
+                    frame,
+                    conf=self.confidence_threshold,
+                    persist=True,
+                    tracker=self.tracker_config,
+                    verbose=False
+                )[0]
+            else:
+                results = self.model(frame, conf=self.confidence_threshold, verbose=False)[0]
             
             people_boxes = []
             helmet_boxes = []
             violation_boxes = []
-            all_people = []  # All person detections for tracking
             
             if results.boxes:
                 for box in results.boxes:
@@ -76,29 +84,17 @@ class HelmetDetector:
                         'center_y': center_y
                     }
                     
+                    # Add tracking ID if available (from YOLO tracking)
+                    if track and hasattr(box, 'id') and box.id is not None:
+                        box_data['track_id'] = int(box.id[0])
+                    
                     # Class mapping: 0=head (no helmet), 1=hardhat, 2=person
                     if cls_id == 0:  # head without helmet - VIOLATION
                         violation_boxes.append(box_data)
-                        all_people.append((center_x, center_y))
                     elif cls_id == 1:  # hardhat - COMPLIANT
                         helmet_boxes.append(box_data)
-                        all_people.append((center_x, center_y))
                     elif cls_id == 2:  # person
                         people_boxes.append(box_data)
-                        all_people.append((center_x, center_y))
-            
-            # Apply tracking if enabled
-            if track and all_people:
-                tracked_objects = self.tracker.update(all_people)
-                track_id = 0
-                for person_box in people_boxes + helmet_boxes + violation_boxes:
-                    if track_id < len(tracked_objects):
-                        obj_ids = list(tracked_objects.keys())
-                        if track_id < len(obj_ids):
-                            person_box['track_id'] = obj_ids[track_id]
-                            track_id += 1
-            else:
-                self.tracker.update([])
             
             return {
                 'people_count': len(people_boxes) + len(helmet_boxes) + len(violation_boxes),

@@ -161,9 +161,15 @@ class DetectionPipeline:
         
         # Feature 9: Auto Tracking (uses same tracking as people)
         if enabled_features.get('tracking', False) or enabled_features.get('line_crossing', False):
-            result['tracked_objects'] = len([b for b in all_people_boxes if 'track_id' in b])
+            tracked_boxes = [b for b in all_people_boxes if 'track_id' in b]
+            result['tracked_objects'] = len(tracked_boxes)
+            # Return boxes for visualization if tracking is specifically enabled
+            if enabled_features.get('tracking', False):
+                result['boxes'] = tracked_boxes
         else:
             result['tracked_objects'] = 0
+            if 'boxes' not in result:
+                result['boxes'] = []
         
         # Feature 10: Smart Motion Detection
         if enabled_features.get('motion', False):
