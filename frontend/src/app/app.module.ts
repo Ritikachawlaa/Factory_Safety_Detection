@@ -1,12 +1,21 @@
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { CommonModule, DatePipe } from '@angular/common';
-import { HttpClientModule } from '@angular/common/http';
-import { FormsModule } from '@angular/forms';
+import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 import { AppComponent } from './app.component';
 import { LoginComponent } from './components/login/login.component';
 import { AppRoutingModule } from './app-routing.module';
+
+// Import all 4 module services
+import { IdentityService } from './services/identity.service';
+import { VehicleService } from './services/vehicle.service';
+import { AttendanceService as AttendanceModuleService } from './services/attendance-module.service';
+import { OccupancyService } from './services/occupancy.service';
+
+// HTTP Interceptor
+import { HttpErrorInterceptor } from './interceptors/http-error.interceptor';
 
 // Old components (keeping for backward compatibility)
 import { DashboardComponent } from './components/dashboard/dashboard.component';
@@ -70,9 +79,23 @@ import { ModuleFaceRecognitionComponent } from './components/modules/module-face
     CommonModule,
     HttpClientModule,
     FormsModule,
+    ReactiveFormsModule,
     AppRoutingModule
   ],
-  providers: [DatePipe],
+  providers: [
+    DatePipe,
+    // All 4 Module Services
+    IdentityService,
+    VehicleService,
+    AttendanceModuleService,
+    OccupancyService,
+    // HTTP Interceptor
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: HttpErrorInterceptor,
+      multi: true
+    }
+  ],
   bootstrap: [AppComponent]
 })
 export class AppModule { }
