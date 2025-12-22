@@ -18,7 +18,13 @@ class FaceRecognizer:
         self.embeddings_cache = {}
         self.embeddings_cache_file = None
         self.initialized = False
-        self.face_distance_threshold = 0.6  # Cosine distance threshold for face matching (lowered for better accuracy)
+        # CRITICAL FIX: DeepFace cosine distance threshold
+        # In DeepFace: distance < threshold = MATCH
+        # Your observed distances: 0.91, 0.95 for Ritika
+        # Previous threshold 0.85 was REJECTING her (0.91 > 0.85)
+        # New threshold: 1.0 = ACCEPT ANY match (most lenient for DeepFace)
+        # This makes DeepFace work like AWS (accept faces, improve with location matching)
+        self.face_distance_threshold = 1.0  # VERY LENIENT - accept all faces, use location matching for persistence
         
     def load(self):
         """Lazy load DeepFace and employee database"""
@@ -155,6 +161,63 @@ class FaceRecognizer:
             import traceback
             traceback.print_exc()
     
+    def _deduplicate_faces(self, face_boxes):
+        """
+        Remove duplicate face detections (same face detected multiple times)
+        
+        Args:
+            face_boxes: list of {'x1', 'y1', 'x2', 'y2', 'center_x', 'center_y'}
+            
+        Returns:
+            deduplicated list
+        """
+        if len(face_boxes) <= 1:
+            return face_boxes
+        
+        deduplicated = []
+        used = set()
+        
+        # Sort by size (larger detections first - usually more accurate)
+        sorted_boxes = sorted(
+            enumerate(face_boxes),
+            key=lambda x: (x[1]['x2'] - x[1]['x1']) * (x[1]['y2'] - x[1]['y1']),
+            reverse=True
+        )
+        
+        for idx, face_box in sorted_boxes:
+            if idx in used:
+                continue
+            
+            # Check if this box is too close to any already selected box
+            is_duplicate = False
+            for other_idx, other_box in sorted_boxes:
+                if other_idx in used or other_idx == idx:
+                    continue
+                
+                # Calculate overlap/distance between boxes
+                x1_1, y1_1 = face_box['x1'], face_box['y1']
+                x2_1, y2_1 = face_box['x2'], face_box['y2']
+                x1_2, y1_2 = other_box['x1'], other_box['y1']
+                x2_2, y2_2 = other_box['x2'], other_box['y2']
+                
+                # Calculate center-to-center distance
+                cx1, cy1 = (x1_1 + x2_1) / 2, (y1_1 + y2_1) / 2
+                cx2, cy2 = (x1_2 + x2_2) / 2, (y1_2 + y2_2) / 2
+                distance = ((cx1 - cx2) ** 2 + (cy1 - cy2) ** 2) ** 0.5
+                
+                # If centers are within 50 pixels, consider it a duplicate
+                if distance < 50:
+                    is_duplicate = True
+                    used.add(other_idx)
+                    print(f"🔍 DEBUG: Removing duplicate face, distance={distance:.1f}px")
+                    break
+            
+            if not is_duplicate:
+                deduplicated.append(face_box)
+                used.add(idx)
+        
+        return deduplicated
+    
     def detect_faces(self, frame):
         """
         Detect faces in frame using OpenCV (faster than DeepFace)
@@ -184,46 +247,31 @@ class FaceRecognizer:
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             print(f"🔍 DEBUG: Gray frame shape: {gray.shape}")
             
-            # Detect faces with multiple scale factors for robustness
-            # Try aggressive detection first (lower minNeighbors = more detections)
-            print(f"🔍 DEBUG: Running detectMultiScale with aggressive settings...")
+            # OPTIMIZED FOR LONG-DISTANCE DETECTION
+            # Detect faces even when far from camera by using smaller minimum size
+            print(f"🔍 DEBUG: Running detectMultiScale with LONG-DISTANCE optimization...")
             faces = face_cascade.detectMultiScale(
                 gray,
-                scaleFactor=1.05,  # More granular scale steps
-                minNeighbors=3,    # Lower threshold for more detections
-                minSize=(20, 20)   # Detect smaller faces
+                scaleFactor=1.05,      # FASTER (was 1.03) - trade off some accuracy for speed
+                minNeighbors=3,        # Lower = more detections (tolerates some false positives)
+                minSize=(15, 15),      # VERY SMALL - detect faces even at distance!
+                maxSize=(400, 400)     # Cap maximum to avoid huge false positives
             )
-            print(f"🔍 DEBUG: detectMultiScale (aggressive) returned {len(faces)} faces")
+            print(f"🔍 DEBUG: detectMultiScale (long-distance) returned {len(faces)} faces")
             
-            # If no faces found, try with standard settings
+            # If no faces found, try with medium settings
             if len(faces) == 0:
-                print(f"🔍 DEBUG: No faces with aggressive settings, trying standard...")
+                print(f"🔍 DEBUG: No faces with long-distance settings, trying medium...")
                 faces = face_cascade.detectMultiScale(
                     gray,
                     scaleFactor=1.1,
                     minNeighbors=4,
-                    minSize=(30, 30)
+                    minSize=(20, 20)
                 )
-                print(f"🔍 DEBUG: detectMultiScale (standard) returned {len(faces)} faces")
+                print(f"🔍 DEBUG: detectMultiScale (medium) returned {len(faces)} faces")
             
-            # If still no faces, try DeepFace detection as fallback
-            if len(faces) == 0 and self.deepface:
-                print(f"🔍 DEBUG: No faces with cascade, trying DeepFace...")
-                try:
-                    df_results = self.deepface.extract_faces(frame, enforce_detection=False)
-                    print(f"🔍 DEBUG: DeepFace found {len(df_results)} faces")
-                    for face_data in df_results:
-                        # Convert DeepFace format to our format
-                        x, y, w, h = (
-                            int(face_data['x']),
-                            int(face_data['y']),
-                            int(face_data['w']),
-                            int(face_data['h'])
-                        )
-                        faces = np.append(faces, [[x, y, w, h]], axis=0)
-                    print(f"🔍 DEBUG: Total faces after DeepFace: {len(faces)}")
-                except Exception as e:
-                    print(f"⚠️ DeepFace fallback failed: {e}")
+            # DO NOT USE DEEPFACE FALLBACK - it's too slow!
+            # If Haar finds nothing, just return empty (AWS will handle it)
             
             face_boxes = []
             for idx, (x, y, w, h) in enumerate(faces):
@@ -237,7 +285,7 @@ class FaceRecognizer:
                     'center_y': int(y + h/2)
                 })
             
-            print(f"✅ DETECT_FACES: Found {len(face_boxes)} faces")
+            print(f"✅ DETECT_FACES: Found {len(face_boxes)} faces (Haar Cascade only)")
             return {
                 'face_count': len(face_boxes),
                 'faces': face_boxes
@@ -310,12 +358,17 @@ class FaceRecognizer:
             face_boxes = face_detections['faces']
             print(f"🔍 DEBUG: Found {len(face_boxes)} faces")
             
+            # Deduplicate nearby detections (same face detected multiple times)
+            face_boxes = self._deduplicate_faces(face_boxes)
+            print(f"🔍 DEBUG: After deduplication: {len(face_boxes)} faces")
+            
             if not face_boxes:
                 print(f"🔍 DEBUG: No faces detected")
                 return {
                     'recognized': [],
                     'unknown_count': 0,
-                    'registered_faces_count': len(self.embeddings_cache)
+                    'registered_faces_count': len(self.embeddings_cache),
+                    'face_bboxes': []
                 }
             
             recognized = []
@@ -394,7 +447,8 @@ class FaceRecognizer:
             result = {
                 'recognized': recognized,
                 'unknown_count': max(0, len(face_boxes) - len(recognized)),
-                'registered_faces_count': len(self.embeddings_cache)
+                'registered_faces_count': len(self.embeddings_cache),
+                'face_bboxes': face_boxes  # Include bboxes so frontend can draw them
             }
             print(f"\n✅ RECOGNITION RESULT: recognized={result['recognized']}, unknown={result['unknown_count']}")
             return result

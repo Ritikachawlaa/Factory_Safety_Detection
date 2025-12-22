@@ -197,11 +197,13 @@ class DetectionPipeline:
                 result['faces_recognized'] = recognition_result['recognized']
                 result['unknown_faces'] = recognition_result['unknown_count']
                 result['registered_faces_count'] = recognition_result.get('registered_faces_count', 0)
+                result['face_bboxes'] = recognition_result.get('face_bboxes', [])  # Pass through bboxes
                 print(f"[PIPELINE] Recognition done: recognized={result['faces_recognized']}, unknown={result['unknown_faces']}")
             else:
                 result['faces_recognized'] = []
                 result['unknown_faces'] = 0
                 result['registered_faces_count'] = len(self.face_detector.embeddings_cache)
+                result['face_bboxes'] = face_result.get('faces', [])  # Use detection bboxes if recognition not requested
         else:
             result['faces_detected'] = 0
             result['faces_recognized'] = []

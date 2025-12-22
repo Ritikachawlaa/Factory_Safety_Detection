@@ -38,7 +38,7 @@ ml_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="ML-Worker")
 # --- CORS MIDDLEWARE ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4200"],  # Frontend URL
+    allow_origins=["http://localhost:4200", "http://localhost:5173"],  # Frontend URLs
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
